@@ -10,7 +10,7 @@ import { Link, useLocation } from "react-router-dom";
 const Navbar = () => {
     const path = useLocation().pathname;
     const [navbarOpen, setNavbarOpen] = useState(false);
-    // const { cart } = useSelector((state) => state.carts);
+    const { cart } = useSelector((state) => state.carts);
     // const { user } = useSelector((state) => state.auth);
     
     return (
@@ -68,8 +68,7 @@ const Navbar = () => {
                     to="/cart">
                         <Badge
                             showZero
-                            // badgeContent={cart?.length || 0}
-                            badgeContent={0}
+                            badgeContent={cart?.length || 0}
                             color="primary"
                             overlap="circular"
                             anchorOrigin={{ vertical: 'top', horizontal: 'right', }}>
