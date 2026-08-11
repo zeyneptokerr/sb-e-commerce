@@ -5,13 +5,13 @@ import { IoIosMenu } from "react-icons/io";
 import { RxCross2 } from "react-icons/rx";
 import { useSelector } from "react-redux";
 import { Link, useLocation } from "react-router-dom";
-// import UserMenu from "../UserMenu";
+import UserMenu from "../UserMenu";
 
 const Navbar = () => {
     const path = useLocation().pathname;
     const [navbarOpen, setNavbarOpen] = useState(false);
     const { cart } = useSelector((state) => state.carts);
-    // const { user } = useSelector((state) => state.auth);
+    const { user } = useSelector((state) => state.auth);
     
     return (
         <div className="h-[70px] bg-custom-gradient text-white z-50 flex items-center sticky top-0">
@@ -77,23 +77,23 @@ const Navbar = () => {
                    </Link> 
                 </li>
 
-                {/* {(user && user.id) ? (
+                {(user && user.id) ? (
                     <li className="font-medium transition-all duration-150">
                         <UserMenu />
                     </li>
-                ) : ( */}
-                <li className="font-medium transition-all duration-150">
-                   <Link className="flex items-center space-x-2 px-4 py-[6px] 
-                            bg-linear-to-r from-purple-600 to-red-500 
-                            text-white font-semibold rounded-md shadow-lg 
-                            hover:from-purple-500 hover:to-red-400 transition 
-                            duration-300 ease-in-out transform "
-                    to="/login">
-                        <FaSignInAlt />
-                        <span>Login</span>
-                   </Link> 
-                </li>
-                {/* )} */}
+                ) : (
+                    <li className="font-medium transition-all duration-150">
+                    <Link className="flex items-center space-x-2 px-4 py-[6px] 
+                                bg-linear-to-r from-purple-600 to-red-500 
+                                text-white font-semibold rounded-md shadow-lg 
+                                hover:from-purple-500 hover:to-red-400 transition 
+                                duration-300 ease-in-out transform "
+                        to="/login">
+                            <FaSignInAlt />
+                            <span>Login</span>
+                    </Link> 
+                    </li>
+                )}
             </ul>
 
             <button

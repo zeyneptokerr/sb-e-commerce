@@ -24,7 +24,7 @@ function ProductViewModal({open, setOpen, product, isAvailable}) {
                 {image && (
                     <div className='flex justify-center aspect-3/2'>
                     <img 
-                    src={image}
+                    src={'https://embarkx.com/sample/placeholder.png'}
                     alt={productName} />
                     </div>
                 )}
