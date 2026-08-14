@@ -10,7 +10,7 @@ import Paginations from "../shared/Paginations";
 
 const Products = () => {
     const { isLoading, errorMessage } = useSelector(
-        (state) => state.error
+        (state) => state.errors
     );
 
     const {products, categories, pagination} = useSelector(

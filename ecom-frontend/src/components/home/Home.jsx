@@ -10,7 +10,7 @@ const Home = () => {
     const dispatch = useDispatch();
     const {products} = useSelector((state) => state.products);
     const { isLoading, errorMessage } = useSelector(
-        (state) => state.error
+        (state) => state.errors
     );
     useEffect(() => {
         dispatch(fetchProducts());

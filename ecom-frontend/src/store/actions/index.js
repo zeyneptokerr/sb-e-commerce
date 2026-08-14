@@ -149,3 +149,118 @@ export const logOutUser = (navigate) => (dispatch) => {
     localStorage.removeItem("auth");
     navigate("/login");
 };
+
+
+export const addUpdateUserAddress = (sendData, toast, addressId, setOpenAddressModal) => async (dispatch, getState) => {
+    // const { user } = getState("auth");
+    // const { data } = await api.post("/addresses", sendData, {
+    //             headers: { Authorization: "Bearer " + user.jwtToken },
+    //         });
+    dispatch({ type: "BUTTON_LOADER" });
+    try {
+        if (!addressId) {
+            const { data } = await api.post("/addresses", sendData );
+        } else {
+            await api.put(`/address/${addressId}`, sendData);
+        }
+        dispatch(getUserAddresses());
+        toast.success("Address Saved Succesfully");
+        dispatch({ type: "IS_SUCCESS"});
+    } catch (error) {
+        console.log(error);
+        toast.error(error?.response?.data?.message || "Internal Server Error");
+        dispatch({ type: "IS_ERROR", payload: null });
+    } finally {
+        setOpenAddressModal(false);
+    }
+};
+
+export const getUserAddresses = () => async (dispatch, getState) => {
+    try {
+        const { user } = getState("auth");
+        dispatch({ type: "IS_FETCHING" });
+        const { data } = await api.get("/addresses");
+        dispatch({ type: "USER_ADDRESS", payload: data});
+        dispatch({ type: "IS_SUCCESS" });
+    } catch (error) {
+        console.log(error);
+        dispatch({
+            type: "IS_ERROR",
+            payload: error?.response?.data?.message || "Failed to fetch user addresses",
+        });
+    }
+};
+
+export const selectUserCheckoutAddress = (address) => {
+    return {
+        type: "SELECT_CHECKOUT_ADDRESS",
+        payload: address,
+    }
+};
+
+export const deleteUserAddress = (toast,  addressId, setOpenDeleteModal) => async (dispatch, getState) => {
+    try {
+        dispatch({ type: "BUTTON_LOADER" });
+        await api.delete(`/address/${addressId}`);
+        dispatch(getUserAddresses());
+        dispatch(clearCheckoutAddress());
+        dispatch({ type: "IS_SUCCESS" });
+        toast.success("Address Deleted Succesfully");
+    } catch (error) {
+        console.log(error);
+        dispatch({ 
+            type: "IS_ERROR", 
+            payload: error?.response?.data?.message || "Some Error Occured", 
+        });        
+    } finally {
+        setOpenDeleteModal(false);
+    }
+};
+
+export const clearCheckoutAddress = () => {
+    return {
+        type: "REMOVE_CHECKOUT_ADDRESS",
+    }
+};
+
+export const addPaymentMethod = (method) => {
+    return {
+        type: "ADD_PAYMENT_METHOD",
+        payload: method,
+    }
+};
+
+export const createUserCart = (sendCartItems) => async (dispatch, getState) => {
+    try {
+        dispatch({ type: "IS_FETCHING" });
+        await api.post("/cart/create", sendCartItems);
+        await dispatch(getUserCart());
+    } catch (error) {
+        console.log(error);
+        dispatch({
+            type: "IS_ERROR",
+            payload: error?.response?.data?.message || "Failed to create cart items",
+        });
+    }
+};
+
+export const getUserCart = () => async (dispatch, getState) => {
+    try {
+        dispatch({ type: "IS_FETCHING" });
+        const { data } = await api.get("/carts/users/cart");
+        dispatch({
+            type: "GET_USER_CART_PRODUCTS",
+            payload: data.products,
+            totalPrice: data.totalPrice,
+            cartId: data.cartId,
+        })
+        localStorage.setItem("cartItems", JSON.stringify(getState().carts.cart));
+        dispatch({ type: "IS_SUCCESS" });
+    } catch (error) {
+        console.log(error);
+        dispatch({
+            type: "IS_ERROR",
+            payload: error?.response?.data?.message || "Failed to fetch cart items",
+        });
+    }
+};
