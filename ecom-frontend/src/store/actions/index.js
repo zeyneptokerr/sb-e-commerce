@@ -264,3 +264,20 @@ export const getUserCart = () => async (dispatch, getState) => {
         });
     }
 };
+
+export const createIzicoPayment = (sendData) => async (dispatch, getState) => {
+    try {
+        const { data } = await api.post("/order/iyzico-payment", sendData);
+        dispatch({
+            type: "ADD_PAYMENT",
+            payload: data,
+        });
+        console.log(data);
+    } catch (error) {
+        console.log(error);
+        dispatch({
+            type: "IS_ERROR",
+            payload: error?.response?.data?.message || "Failed to payment",
+        });
+    }
+};

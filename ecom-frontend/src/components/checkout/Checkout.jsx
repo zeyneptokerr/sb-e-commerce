@@ -7,8 +7,8 @@ import toast from 'react-hot-toast';
 import Skeleton from '../shared/Skeleton';
 import ErrorPage from '../shared/ErrorPage';
 import PaymentMethod from './PaymentMethod';
-//import OrderSummary from './OrderSummary';
-//import StripePayment from './StripePayment';
+import OrderSummary from './OrderSummary';
+import IzicoPayment from './IzicoPayment';
 // import PaypalPayment from './PaypalPayment';
 
 const Checkout = () => {
@@ -75,10 +75,10 @@ const Checkout = () => {
                                         paymentMethod={paymentMethod}/>}
                 {activeStep === 3 && 
                     <>
-                        {paymentMethod === "Stripe" ? (
-                            <StripePayment />
+                        {paymentMethod === "Izico" ? (
+                            <IzicoPayment />
                         ) : (
-                            <PaypalPayment />
+                            <IzicoPayment />
                         )}
                     </>}
             </div>

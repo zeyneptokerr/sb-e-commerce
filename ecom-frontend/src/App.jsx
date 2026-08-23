@@ -12,6 +12,9 @@ import LogIn from './components/auth/LogIn';
 import PrivateRoute from './components/PrivateRoute';
 import Register from './components/auth/Register';
 import Checkout from './components/checkout/Checkout';
+import PaymentSuccess from './components/checkout/PaymentSuccess';
+import PaymentFailed from './components/checkout/PaymentFailed';
+
 
 function App() {
 
@@ -25,6 +28,9 @@ function App() {
           <Route path="/about" element={<About />} /> 
           <Route path="/contact" element={<Contact />} />
           <Route path="/cart" element={<Cart/>} />
+
+          <Route path="/payment-success" element={<PaymentSuccess />}/>
+          <Route path="/payment-failed" element={<PaymentFailed />} />
           
           <Route path="checkout" element={<Checkout/>} />
           {/* <Route path="/" element={<PrivateRoute />}>

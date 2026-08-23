@@ -36,9 +36,9 @@ const PaymentMethod = () => {
                 onChange={(e) => paymentMethodHandler(e.target.value)}
             >
                 <FormControlLabel 
-                    value="Stripe" 
+                    value="Izico" 
                     control={<Radio color='primary' />} 
-                    label="Stripe" 
+                    label="Izico" 
                     className='text-gray-700'/>
 
                 <FormControlLabel 

@@ -59,7 +59,7 @@ public class AuthController {
         } catch (AuthenticationException exception) {
             Map<String, Object> map = new HashMap<>();
             map.put("message", "Bad credentials");
-            map.put("status", false);
+            map.put("status", "false");
             return new ResponseEntity<Object>(map, HttpStatus.NOT_FOUND);
         }
 
