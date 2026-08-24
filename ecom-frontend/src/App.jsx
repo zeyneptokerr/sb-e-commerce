@@ -14,6 +14,12 @@ import Register from './components/auth/Register';
 import Checkout from './components/checkout/Checkout';
 import PaymentSuccess from './components/checkout/PaymentSuccess';
 import PaymentFailed from './components/checkout/PaymentFailed';
+import AdminLayout from './components/admin/AdminLayout';
+import Dashboard from './components/admin/dashboard/Dashboard';
+import AdminProducts from './components/admin/products/AdminProducts';
+import Sellers from './components/admin/sellers/Sellers';
+import Category from './components/admin/categories/Category';
+import Orders from './components/admin/orders/Orders';
 
 
 function App() {
@@ -32,14 +38,24 @@ function App() {
           <Route path="/payment-success" element={<PaymentSuccess />}/>
           <Route path="/payment-failed" element={<PaymentFailed />} />
           
-          <Route path="checkout" element={<Checkout/>} />
-          {/* <Route path="/" element={<PrivateRoute />}>
+          {/* <Route path="checkout" element={<Checkout/>} /> */}
+          <Route path="/" element={<PrivateRoute />}>
             <Route path="checkout" element={<Checkout/>} />
-          </Route> */}
+          </Route>
           
           <Route path="/" element={<PrivateRoute publicPage />}>
             <Route path="/login" element={<LogIn/>} />
             <Route path="/register" element={<Register/>} />
+          </Route>
+
+           <Route path='/' element={<PrivateRoute adminOnly />}>
+            <Route path='/admin' element={ <AdminLayout />}>
+              <Route path='' element={<Dashboard />} />
+              <Route path='products' element={<AdminProducts />} />
+              <Route path='sellers' element={<Sellers />} />
+              <Route path='orders' element={<Orders />} />
+              <Route path='categories' element={<Category />} />
+            </Route>
           </Route>
         
         </Routes>

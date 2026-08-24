@@ -42,7 +42,11 @@ public class AuthTokenFilter extends OncePerRequestFilter {
                         new UsernamePasswordAuthenticationToken(userDetails,
                                 null,
                                 userDetails.getAuthorities());
-                logger.debug("Roles from JWT: {}", userDetails.getAuthorities());
+                if (userDetails == null || userDetails.getAuthorities() == null) {
+                    logger.warn("UserDetails or roles are null for username: {}", username);
+                } else {
+                    logger.debug("Roles from UserDetails: {}", userDetails.getAuthorities());
+                }
 
                 authentication.setDetails(new WebAuthenticationDetailsSource().buildDetails(request));
 

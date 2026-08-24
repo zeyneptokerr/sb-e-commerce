@@ -281,3 +281,306 @@ export const createIzicoPayment = (sendData) => async (dispatch, getState) => {
         });
     }
 };
+
+export const analyticsAction = () => async (dispatch, getState) => {
+        try {
+            dispatch({ type: "IS_FETCHING"});
+            const { data } = await api.get('/admin/app/analytics');
+            dispatch({
+                type: "FETCH_ANALYTICS",
+                payload: data,
+            })
+            dispatch({ type: "IS_SUCCESS"});
+        } catch (error) {
+            dispatch({ 
+                type: "IS_ERROR",
+                payload: error?.response?.data?.message || "Failed to fetch analytics data",
+            });
+        }
+};
+
+export const getOrdersForDashboard = (queryString, isAdmin) => async (dispatch) => {
+    try {
+        dispatch({ type: "IS_FETCHING" });
+        const endpoint = isAdmin ? "/admin/orders" : "/seller/orders";
+        const { data } = await api.get(`${endpoint}?${queryString}`);
+        dispatch({
+            type: "GET_ADMIN_ORDERS",
+            payload: data.content,
+            pageNumber: data.pageNumber,
+            pageSize: data.pageSize,
+            totalElements: data.totalElements,
+            totalPages: data.totalPages,
+            lastPage: data.lastPage,
+        });
+        dispatch({ type: "IS_SUCCESS" });
+    } catch (error) {
+        console.log(error);
+        dispatch({ 
+            type: "IS_ERROR",
+            payload: error?.response?.data?.message || "Failed to fetch orders data",
+         });
+    }
+};
+
+
+export const updateOrderStatusFromDashboard =
+     (orderId, orderStatus, toast, setLoader, isAdmin) => async (dispatch, getState) => {
+    try {
+        setLoader(true);
+        console.log("dneme " + isAdmin);
+        const endpoint = isAdmin ? "/admin/orders/" : "/seller/orders/";
+        console.log(endpoint);
+        const { data } = await api.put(`${endpoint}${orderId}/status`, { status: orderStatus});
+        toast.success(data.message || "Order updated successfully");
+        await dispatch(getOrdersForDashboard());
+    } catch (error) {
+        console.log(error);
+        toast.error(error?.response?.data?.message || "Internal Server Error");
+    } finally {
+        setLoader(false)
+    }
+};
+
+export const dashboardProductsAction = (queryString, isAdmin) => async (dispatch) => {
+    try {
+        dispatch({ type: "IS_FETCHING" });
+        const endpoint = isAdmin ? "/admin/products" : "/seller/products";
+        const { data } = await api.get(`${endpoint}?${queryString}`);
+        dispatch({
+            type: "FETCH_PRODUCTS",
+            payload: data.content,
+            pageNumber: data.pageNumber,
+            pageSize: data.pageSize,
+            totalElements: data.totalElements,
+            totalPages: data.totalPages,
+            lastPage: data.lastPage,
+        });
+        dispatch({ type: "IS_SUCCESS" });
+    } catch (error) {
+        console.log(error);
+        dispatch({ 
+            type: "IS_ERROR",
+            payload: error?.response?.data?.message || "Failed to fetch dashboard products",
+         });
+    }
+};
+
+export const updateProductFromDashboard = 
+    (sendData, toast, reset, setLoader, setOpen, isAdmin) => async (dispatch) => {
+    try {
+        setLoader(true);
+        const endpoint = isAdmin ? "/admin/products/" : "/seller/products/";
+        await api.put(`${endpoint}${sendData.id}`, sendData);
+        toast.success("Product update successful");
+        reset();
+        setLoader(false);
+        setOpen(false);
+        await dispatch(dashboardProductsAction());
+    } catch (error) {
+        toast.error(error?.response?.data?.description || "Product update failed");
+     
+    }
+};
+
+
+export const addNewProductFromDashboard = 
+    (sendData, toast, reset, setLoader, setOpen, isAdmin) => async(dispatch, getState) => {
+        try {
+            setLoader(true);
+            const endpoint = isAdmin ? "/admin/categories/" : "/seller/categories/";
+            await api.post(`${endpoint}${sendData.categoryId}/product`,
+                sendData
+            );
+            toast.success("Product created successfully");
+            reset();
+            setOpen(false);
+            await dispatch(dashboardProductsAction());
+        } catch (error) {
+            console.error(err);
+            toast.error(err?.response?.data?.description || "Product creation failed");
+        } finally {
+            setLoader(false);
+        }
+};
+
+export const deleteProduct = 
+    (setLoader, productId, toast, setOpenDeleteModal, isAdmin) => async (dispatch, getState) => {
+    try {
+        setLoader(true)
+        const endpoint = isAdmin ? "/admin/products/" : "/seller/products/";
+        await api.delete(`${endpoint}${productId}`);
+        toast.success("Product deleted successfully");
+        setLoader(false);
+        setOpenDeleteModal(false);
+        await dispatch(dashboardProductsAction());
+    } catch (error) {
+        console.log(error);
+        toast.error(
+            error?.response?.data?.message || "Some Error Occured"
+        )
+    }
+};
+
+
+export const updateProductImageFromDashboard = 
+    (formData, productId, toast, setLoader, setOpen, isAdmin) => async (dispatch) => {
+    try {
+        setLoader(true);
+        const endpoint = isAdmin ? "/admin/products/" : "/seller/products/";
+        await api.put(`${endpoint}${productId}/image`, formData);
+        toast.success("Image upload successful");
+        setLoader(false);
+        setOpen(false);
+        await dispatch(dashboardProductsAction());
+    } catch (error) {
+        toast.error(error?.response?.data?.description || "Product Image upload failed");
+     
+    }
+};
+
+export const getAllCategoriesDashboard = (queryString) => async (dispatch) => {
+  dispatch({ type: "CATEGORY_LOADER" });
+  try {
+    const { data } = await api.get(`/public/categories?${queryString}`);
+    dispatch({
+      type: "FETCH_CATEGORIES",
+      payload: data["content"],
+      pageNumber: data["pageNumber"],
+      pageSize: data["pageSize"],
+      totalElements: data["totalElements"],
+      totalPages: data["totalPages"],
+      lastPage: data["lastPage"],
+    });
+
+    dispatch({ type: "CATEGORY_SUCCESS" });
+  } catch (err) {
+    console.log(err);
+
+    dispatch({
+      type: "IS_ERROR",
+      payload: err?.response?.data?.message || "Failed to fetch categories",
+    });
+  }
+};
+
+export const createCategoryDashboardAction =
+  (sendData, setOpen, reset, toast) => async (dispatch, getState) => {
+    try {
+      dispatch({ type: "CATEGORY_LOADER" });
+      await api.post("/admin/categories", sendData);
+      dispatch({ type: "CATEGORY_SUCCESS" });
+      reset();
+      toast.success("Category Created Successful");
+      setOpen(false);
+      await dispatch(getAllCategoriesDashboard());
+    } catch (err) {
+      console.log(err);
+      toast.error(
+        err?.response?.data?.categoryName || "Failed to create new category"
+      );
+
+      dispatch({
+        type: "IS_ERROR",
+        payload: err?.response?.data?.message || "Internal Server Error",
+      });
+    }
+  };
+
+export const updateCategoryDashboardAction =
+  (sendData, setOpen, categoryID, reset, toast) =>
+  async (dispatch, getState) => {
+    try {
+      dispatch({ type: "CATEGORY_LOADER" });
+
+      await api.put(`/admin/categories/${categoryID}`, sendData);
+
+      dispatch({ type: "CATEGORY_SUCCESS" });
+
+      reset();
+      toast.success("Category Update Successful");
+      setOpen(false);
+      await dispatch(getAllCategoriesDashboard());
+    } catch (err) {
+      console.log(err);
+      toast.error(
+        err?.response?.data?.categoryName || "Failed to update category"
+      );
+
+      dispatch({
+        type: "IS_ERROR",
+        payload: err?.response?.data?.message || "Internal Server Error",
+      });
+    }
+  };
+
+export const deleteCategoryDashboardAction =
+  (setOpen, categoryID, toast) => async (dispatch, getState) => {
+    try {
+      dispatch({ type: "CATEGORY_LOADER" });
+
+      await api.delete(`/admin/categories/${categoryID}`);
+
+      dispatch({ type: "CATEGORY_SUCCESS" });
+
+      toast.success("Category Delete Successful");
+      setOpen(false);
+      await dispatch(getAllCategoriesDashboard());
+    } catch (err) {
+      console.log(err);
+      toast.error(err?.response?.data?.message || "Failed to delete category");
+      dispatch({
+        type: "IS_ERROR",
+        payload: err?.response?.data?.message || "Internal Server Error",
+      });
+    }
+  };
+
+
+  export const getAllSellersDashboard =
+  (queryString) => async (dispatch, getState) => {
+    const { user } = getState().auth;
+    try {
+      dispatch({ type: "IS_FETCHING" });
+      const { data } = await api.get(`/auth/sellers?${queryString}`);
+      dispatch({
+        type: "GET_SELLERS",
+        payload: data["content"],
+        pageNumber: data["pageNumber"],
+        pageSize: data["pageSize"],
+        totalElements: data["totalElements"],
+        totalPages: data["totalPages"],
+        lastPage: data["lastPage"],
+      });
+
+      dispatch({ type: "IS_SUCCESS" });
+    } catch (err) {
+      console.log(err);
+      dispatch({
+        type: "IS_ERROR",
+        payload: err?.response?.data?.message || "Failed to fetch sellers data",
+      });
+    }
+  };
+
+export const addNewDashboardSeller =
+  (sendData, toast, reset, setOpen, setLoader) => async (dispatch) => {
+    try {
+      setLoader(true);
+      await api.post("/auth/signup", sendData);
+      reset();
+      toast.success("Seller registered successfully!");
+
+      await dispatch(getAllSellersDashboard());
+    } catch (err) {
+      console.log(err);
+      toast.error(
+        err?.response?.data?.message ||
+          err?.response?.data?.password ||
+          "Internal Server Error"
+      );
+    } finally {
+      setLoader(false);
+      setOpen(false);
+    }
+  };

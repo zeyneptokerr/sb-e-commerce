@@ -49,10 +49,10 @@ public class IyzicoServiceImpl implements IyzicoService{
         request.setDebitCardAllowed(Boolean.TRUE);
 
         List<Integer> enabledInstallments = new ArrayList<Integer>();
-        enabledInstallments.add(2);
-        enabledInstallments.add(3);
-        enabledInstallments.add(6);
-        enabledInstallments.add(9);
+        enabledInstallments.add(Integer.valueOf(2));
+        enabledInstallments.add(Integer.valueOf(3));
+        enabledInstallments.add(Integer.valueOf(6));
+        enabledInstallments.add(Integer.valueOf(9));
         request.setEnabledInstallments(enabledInstallments);
 
         Buyer buyer = new Buyer();
