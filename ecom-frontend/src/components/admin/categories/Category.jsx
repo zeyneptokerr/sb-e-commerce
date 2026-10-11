@@ -6,13 +6,13 @@ import { FaFolderOpen, FaThList } from "react-icons/fa";
 import toast from "react-hot-toast";
 
 import Modal from "../../shared/Modal";
-// import AddCategoryForm from "./AddCategoryForm";
+import AddCategoryForm from "./AddCategoryForm";
 import Loader from "../../shared/Loader";
-// import { DeleteModal } from "../../../components/shared/DeleteModal";
-// import useCategoryFilter from "../../../hooks/useCategoryFilter";
+import { DeleteModal } from "../../../components/shared/DeleteModal";
+import useCategoryFilter from "../../../hooks/useCategoryFilter";
 import ErrorPage from "../../shared/ErrorPage";
-// import { deleteCategoryDashboardAction } from "../../../store/actions";
-// import { categoryTableColumns } from "../../helper/tableColumn";
+import { deleteCategoryDashboardAction } from "../../../store/actions";
+import { categoryTableColumns } from "../../helper/tableColumn";
 
 const Category = () => {
   const [searchParams] = useSearchParams();

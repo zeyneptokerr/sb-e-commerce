@@ -1,4 +1,4 @@
-package com.ecommerce.project.securtiy.request;
+package com.ecommerce.project.security.request;
 
 import jakarta.validation.constraints.Email;
 import jakarta.validation.constraints.NotBlank;

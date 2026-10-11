@@ -2,12 +2,12 @@ import React, { useState } from "react";
 import { useSelector } from "react-redux";
 import { MdPersonAdd } from "react-icons/md";
 
-// import SellerTable from "./SellerTable";
+import SellerTable from "./SellerTable";
 import ErrorPage from "../../shared/ErrorPage";
 import Loader from "../../shared/Loader";
 import Modal from "../../shared/Modal";
-// import AddSellerForm from "./AddSellerForm";
-// import useSellerFilter from "./useSellerFilter";
+import AddSellerForm from "./AddSellerForm";
+import useSellerFilter from "./useSellerFilter";
 
 const Sellers = () => {
   const [openModal, setOpenModal] = useState(false);
