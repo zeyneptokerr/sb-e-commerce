@@ -1,6 +1,17 @@
 import api from "../../api/api"
 import { toast } from "react-hot-toast";
 
+const persistCartForLoggedInUser = async (dispatch, getState) => {
+    if (!getState().auth.user) return;
+
+    const cartItems = getState().carts.cart.map(({ productId, quantity }) => ({
+        productId,
+        quantity,
+    }));
+
+    await api.post("/cart/create", cartItems);
+};
+
 export const fetchProducts = (queryString) => async (dispatch) => {
     try {
         dispatch({ type: "IS_FETCHING" });
@@ -48,20 +59,29 @@ export const fetchCategories = () => async (dispatch) => {
 };
 
 export const addToCart = (data, qty = 1, toast) =>
-    (dispatch, getState) => {
+    async (dispatch, getState) => {
         const {products} = getState().products;
-        const getProduct = products.find(
+        const product = products.find(
             (item) => item.productId === data.productId
         );
-        
-        const isQuantityExist = getProduct.quantity >= qty;
 
-        if (isQuantityExist) {
+        const existingCartItem = getState().carts.cart.find(
+            (item) => item.productId === data.productId
+        );
+        const nextQuantity = (existingCartItem?.quantity ?? 0) + qty;
+        const isQuantityAvailable = product && product.quantity >= nextQuantity;
+
+        if (isQuantityAvailable) {
             dispatch({
                 type: "ADD_CART",
-                payload: {...data, quantity: qty}});
+                payload: {...data, quantity: nextQuantity}});
             toast.success(`${data?.productName} added to the cart`);
             localStorage.setItem("cartItems", JSON.stringify(getState().carts.cart));
+            try {
+                await persistCartForLoggedInUser(dispatch, getState);
+            } catch (error) {
+                console.error("Failed to save cart", error);
+            }
         } else {
             toast.error("Out of stock");
         }
@@ -69,7 +89,7 @@ export const addToCart = (data, qty = 1, toast) =>
 };
 
 export const increaseCartQuantity = (data, toast, currentQuantity, setCurrentQuantity) => 
-    (dispatch, getState) => {
+    async (dispatch, getState) => {
         const {products} = getState().products;
         const getProduct = products.find(
             (item) => item.productId === data.productId
@@ -83,30 +103,45 @@ export const increaseCartQuantity = (data, toast, currentQuantity, setCurrentQua
 
             dispatch({
                 type: "ADD_CART",
-                payload: {...data, quantity: newQuantity + 1},
+                payload: {...data, quantity: newQuantity},
             });
             localStorage.setItem("cartItems", JSON.stringify(getState().carts.cart));
+            try {
+                await persistCartForLoggedInUser(dispatch, getState);
+            } catch (error) {
+                console.error("Failed to save cart", error);
+            }
         } else {
             toast.error("Quantity Reached to Limit");
         }
 };
 
 export const decreaseCartQuantity = (data, newQuantity) => 
-    (dispatch, getState) => {
+    async (dispatch, getState) => {
         dispatch({
             type: "ADD_CART",
             payload: {...data, quantity: newQuantity},
         });
         localStorage.setItem("cartItems", JSON.stringify(getState().carts.cart));
+        try {
+            await persistCartForLoggedInUser(dispatch, getState);
+        } catch (error) {
+            console.error("Failed to save cart", error);
+        }
 };
 
-export const removeFromCart = (data, toast) => (dispatch, getState) => {
+export const removeFromCart = (data, toast) => async (dispatch, getState) => {
     dispatch({
         type: "REMOVE_CART",
         payload: {...data},
     });
     toast.success(`${data?.productName} removed from cart`);
     localStorage.setItem("cartItems", JSON.stringify(getState().carts.cart));
+    try {
+        await persistCartForLoggedInUser(dispatch, getState);
+    } catch (error) {
+        console.error("Failed to save cart", error);
+    }
 };
 
 export const authenticateSignInUser = (sendData, toast, reset, navigate, setLoader) => 
@@ -116,6 +151,7 @@ export const authenticateSignInUser = (sendData, toast, reset, navigate, setLoad
             const { data } = await api.post("/auth/signin", sendData);
             dispatch({ type: "LOGIN_USER", payload: data});
             localStorage.setItem("auth", JSON.stringify(data));
+            await dispatch(getUserCart());
             reset();
             toast.success("Login Succes");
             navigate("/");
@@ -146,7 +182,9 @@ export const registerNewUser = (sendData, toast, reset, navigate, setLoader) =>
 
 export const logOutUser = (navigate) => (dispatch) => {
     dispatch({ type: "LOG_OUT" });
+    dispatch({ type: "CLEAR_CART" });
     localStorage.removeItem("auth");
+    localStorage.removeItem("cartItems");
     navigate("/login");
 };
 
@@ -179,7 +217,7 @@ export const getUserAddresses = () => async (dispatch, getState) => {
     try {
         const { user } = getState("auth");
         dispatch({ type: "IS_FETCHING" });
-        const { data } = await api.get("/addresses");
+        const { data } = await api.get("/users/addresses");
         dispatch({ type: "USER_ADDRESS", payload: data});
         dispatch({ type: "IS_SUCCESS" });
     } catch (error) {
@@ -257,6 +295,11 @@ export const getUserCart = () => async (dispatch, getState) => {
         localStorage.setItem("cartItems", JSON.stringify(getState().carts.cart));
         dispatch({ type: "IS_SUCCESS" });
     } catch (error) {
+        if (error?.response?.status === 404) {
+            dispatch({ type: "GET_USER_CART_PRODUCTS", payload: [], totalPrice: 0, cartId: null });
+            localStorage.setItem("cartItems", "[]");
+            return;
+        }
         console.log(error);
         dispatch({
             type: "IS_ERROR",
@@ -320,6 +363,28 @@ export const getOrdersForDashboard = (queryString, isAdmin) => async (dispatch) 
             type: "IS_ERROR",
             payload: error?.response?.data?.message || "Failed to fetch orders data",
          });
+    }
+};
+
+export const getUserOrders = (queryString = "pageNumber=0&pageSize=10") => async (dispatch) => {
+    try {
+        dispatch({ type: "IS_FETCHING" });
+        const { data } = await api.get(`/orders/users?${queryString}`);
+        dispatch({
+            type: "GET_USER_ORDERS",
+            payload: data.content,
+            pageNumber: data.pageNumber,
+            pageSize: data.pageSize,
+            totalElements: data.totalElements,
+            totalPages: data.totalPages,
+            lastPage: data.lastPage,
+        });
+        dispatch({ type: "IS_SUCCESS" });
+    } catch (error) {
+        dispatch({
+            type: "IS_ERROR",
+            payload: error?.response?.data?.message || "Siparişler yüklenemedi.",
+        });
     }
 };
 

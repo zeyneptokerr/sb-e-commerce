@@ -40,8 +40,8 @@ public class AddressServiceImpl implements AddressService {
     }
 
     @Override
-    public List<AddressDTO> getAddresses() {
-        List<Address> addresses = addressRepository.findAll();
+    public List<AddressDTO> getAddresses(User user) {
+        List<Address> addresses = user.getAddresses();
         return addresses.stream()
                 .map(address -> modelMapper.map(address, AddressDTO.class))
                 .toList();
@@ -57,10 +57,7 @@ public class AddressServiceImpl implements AddressService {
 
     @Override
     public List<AddressDTO> getUserAddresses(User user) {
-        List<Address> addresses = user.getAddresses();
-        return addresses.stream()
-                .map(address -> modelMapper.map(address, AddressDTO.class))
-                .toList();
+        return getAddresses(user);
     }
 
     @Override

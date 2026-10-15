@@ -109,6 +109,15 @@ public class OrderController {
         return new ResponseEntity<OrderResponse>(orderResponse, HttpStatus.OK);
     }
 
+    @GetMapping("/orders/users")
+    public ResponseEntity<OrderResponse> getUserOrders(
+            @RequestParam(name = "pageNumber", defaultValue = AppConstants.PAGE_NUMBER) Integer pageNumber,
+            @RequestParam(name = "pageSize", defaultValue = AppConstants.PAGE_SIZE) Integer pageSize
+    ) {
+        OrderResponse response = orderService.getUserOrders(authUtil.loggedInEmail(), pageNumber, pageSize);
+        return ResponseEntity.ok(response);
+    }
+
     @PutMapping("/admin/orders/{orderId}/status")
     public ResponseEntity<OrderDTO> updateOrderStatus(@PathVariable Long orderId,
                                                       @RequestBody OrderStatusUpdateDto orderStatusUpdateDto) {

@@ -133,6 +133,26 @@ public class OrderServiceImpl implements OrderService{
         return orderResponse;
     }
 
+    @Transactional
+    @Override
+    public OrderResponse getUserOrders(String email, Integer pageNumber, Integer pageSize) {
+        Pageable pageDetails = PageRequest.of(pageNumber, pageSize);
+        Page<Order> pageOrders = orderRepository.findByEmailOrderByOrderDateDescOrderIdDesc(email, pageDetails);
+
+        List<OrderDTO> orderDTOs = pageOrders.getContent().stream()
+                .map(order -> modelMapper.map(order, OrderDTO.class))
+                .toList();
+
+        OrderResponse response = new OrderResponse();
+        response.setContent(orderDTOs);
+        response.setPageNumber(pageOrders.getNumber());
+        response.setPageSize(pageOrders.getSize());
+        response.setTotalElements(pageOrders.getTotalElements());
+        response.setTotalPages(pageOrders.getTotalPages());
+        response.setLastPage(pageOrders.isLast());
+        return response;
+    }
+
     @Override
     public OrderDTO updateOrder(Long orderId, String status) {
         Order order = orderRepository.findById(orderId)

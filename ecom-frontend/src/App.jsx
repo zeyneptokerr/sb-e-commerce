@@ -20,6 +20,8 @@ import AdminProducts from './components/admin/products/AdminProducts';
 import Sellers from './components/admin/sellers/Sellers';
 import Category from './components/admin/categories/Category';
 import Orders from './components/admin/orders/Orders';
+import UserOrders from './components/orders/UserOrders';
+import Profile from './components/profile/Profile';
 
 
 function App() {
@@ -41,6 +43,8 @@ function App() {
           {/* <Route path="checkout" element={<Checkout/>} /> */}
           <Route path="/" element={<PrivateRoute />}>
             <Route path="checkout" element={<Checkout/>} />
+            <Route path="profile" element={<Profile />} />
+            <Route path="profile/orders" element={<UserOrders />} />
           </Route>
           
           <Route path="/" element={<PrivateRoute publicPage />}>

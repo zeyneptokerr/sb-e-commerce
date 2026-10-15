@@ -23,6 +23,13 @@ public class UserInfoResponse {
         this.roles = roles;
     }
 
+    public UserInfoResponse(Long id, String username, String email, List<String> roles) {
+        this.id = id;
+        this.username = username;
+        this.email = email;
+        this.roles = roles;
+    }
+
     public Long getId() {
         return id;
     }
