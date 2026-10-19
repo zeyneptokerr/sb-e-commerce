@@ -1,17 +1,26 @@
 package com.ecommerce.project.service;
 
 import com.iyzipay.Options;
+import com.iyzipay.model.Currency;
+import com.iyzipay.model.Locale;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.annotation.Value;
+import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
 import com.iyzipay.model.*;
 import com.iyzipay.request.CreateCheckoutFormInitializeRequest;
 import com.iyzipay.request.RetrieveCheckoutFormRequest;
+import com.ecommerce.project.model.Cart;
+import com.ecommerce.project.model.CartItem;
+import com.ecommerce.project.payload.AddressDTO;
+import com.ecommerce.project.payload.IyzicoPaymentDto;
+import com.ecommerce.project.payload.IyzicoCallbackResult;
+import com.ecommerce.project.repositories.CartRepository;
+import org.springframework.util.StringUtils;
 
 import java.math.BigDecimal;
-import java.util.ArrayList;
-import java.util.List;
+import java.util.*;
 
 
 @Service
@@ -26,11 +35,52 @@ public class IyzicoServiceImpl implements IyzicoService{
     @Value( "${iyzico.base.url}")
     private String iyzicoBaseUrl;
 
+    @Value("${iyzico.callback.url}")
+    private String callbackUrl;
+
+    @Autowired
+    private CartRepository cartRepository;
+
+    @Autowired
+    private OrderService orderService;
+
     private static final Logger logger = LoggerFactory.getLogger(IyzicoServiceImpl.class);
 
 
     @Override
-    public CheckoutFormInitialize initializeCheckoutForm() {
+    public CheckoutFormInitialize initializeCheckoutForm(String email, IyzicoPaymentDto paymentDto) {
+        Cart cart = cartRepository.findCartByEmail(email);
+        if (cart == null || cart.getCartItems() == null || cart.getCartItems().isEmpty()) {
+            throw new IllegalStateException("Ödeme için sepet boş.");
+        }
+        if (paymentDto == null || paymentDto.getAddress() == null) {
+            throw new IllegalArgumentException("Teslimat adresi zorunludur.");
+        }
+
+        AddressDTO addressDto = paymentDto.getAddress();
+        if (addressDto.getAddressId() == null) {
+            throw new IllegalArgumentException("Kayıtlı teslimat adresi seçilmelidir.");
+        }
+        String fullAddress = String.join(" ", Arrays.asList(addressDto.getStreet(), addressDto.getBuildingName(), addressDto.getState())).trim();
+        if (!StringUtils.hasText(fullAddress) || !StringUtils.hasText(addressDto.getCity()) || !StringUtils.hasText(addressDto.getCountry()) || !StringUtils.hasText(addressDto.getPincode())) {
+            throw new IllegalArgumentException("Adresin sokak, şehir, ülke ve posta kodu alanları zorunludur.");
+        }
+
+        BigDecimal totalPrice = BigDecimal.ZERO;
+        List<BasketItem> basketItems = new ArrayList<>();
+        for (CartItem cartItem : cart.getCartItems()) {
+            BigDecimal itemPrice = BigDecimal.valueOf(cartItem.getProductPrice()).multiply(BigDecimal.valueOf(cartItem.getQuantity())).setScale(2, java.math.RoundingMode.HALF_UP);
+            totalPrice = totalPrice.add(itemPrice);
+
+            BasketItem basketItem = new BasketItem();
+            basketItem.setId(String.valueOf(cartItem.getProduct().getProductId()));
+            basketItem.setName(cartItem.getProduct().getProductName());
+            basketItem.setCategory1(cartItem.getProduct().getCategory() != null ? cartItem.getProduct().getCategory().getCategoryName() : "Ürün");
+            basketItem.setItemType(BasketItemType.PHYSICAL.name());
+            basketItem.setPrice(itemPrice);
+            basketItems.add(basketItem);
+        }
+
         Options options = new Options();
         options.setApiKey(iyzicoApiKey);
         options.setSecretKey(iyzicoSecretKey);
@@ -38,93 +88,62 @@ public class IyzicoServiceImpl implements IyzicoService{
 
         CreateCheckoutFormInitializeRequest request = new CreateCheckoutFormInitializeRequest();
         request.setLocale(Locale.TR.getValue());
-        request.setConversationId("123456789");
-        request.setPrice(new BigDecimal("1"));
-        request.setPaidPrice(new BigDecimal("1.2"));
+        String conversationId = UUID.randomUUID().toString();
+        request.setConversationId(conversationId);
+        request.setPrice(totalPrice);
+        request.setPaidPrice(totalPrice);
         request.setCurrency(Currency.TRY.name());
-        request.setBasketId("B67832");
+        request.setBasketId(String.valueOf(cart.getCartId()));
         request.setPaymentGroup(PaymentGroup.PRODUCT.name());
-        // request.setCallbackUrl("ngrok http http://localhost:8080/api/order/iyzico-payment-callback=macaw-body-dyslexic.ngrok-free.dev 8080");
-        request.setCallbackUrl("https://macaw-body-dyslexic.ngrok-free.dev/api/order/iyzico-payment-callback");
+        request.setCallbackUrl(callbackUrl);
         request.setDebitCardAllowed(Boolean.TRUE);
 
-        List<Integer> enabledInstallments = new ArrayList<Integer>();
-        enabledInstallments.add(Integer.valueOf(2));
-        enabledInstallments.add(Integer.valueOf(3));
-        enabledInstallments.add(Integer.valueOf(6));
-        enabledInstallments.add(Integer.valueOf(9));
+        List<Integer> enabledInstallments = Arrays.asList(2, 3, 6, 9);
         request.setEnabledInstallments(enabledInstallments);
 
         Buyer buyer = new Buyer();
-        buyer.setId("BY789");
-        buyer.setName("John");
-        buyer.setSurname("Doe");
-        buyer.setGsmNumber("+905350000000");
-        buyer.setEmail("email@email.com");
-        buyer.setIdentityNumber("74300864791");
-        buyer.setLastLoginDate("2015-10-05 12:43:35");
-        buyer.setRegistrationDate("2013-04-21 15:12:09");
-        buyer.setRegistrationAddress("Nidakule Göztepe, Merdivenköy Mah. Bora Sok. No:1");
-        buyer.setIp("85.34.78.112");
-        buyer.setCity("Istanbul");
-        buyer.setCountry("Turkey");
-        buyer.setZipCode("34732");
+        buyer.setId(String.valueOf(cart.getUser().getUserId()));
+        String[] nameParts = cart.getUser().getUserName().trim().split("\\s+", 2);
+        buyer.setName(nameParts[0]);
+        buyer.setSurname(nameParts.length > 1 ? nameParts[1] : nameParts[0]);
+        buyer.setGsmNumber("+905000000000"); // Telefon ve kimlik no kullanıcı profilinde tutulmuyor.
+        buyer.setEmail(cart.getUser().getEmail());
+        buyer.setIdentityNumber("11111111111"); // iyzico sandbox test kimlik numarası
+        buyer.setRegistrationAddress(fullAddress);
+        buyer.setIp("127.0.0.1");
+        buyer.setCity(addressDto.getCity());
+        buyer.setCountry(addressDto.getCountry());
+        buyer.setZipCode(addressDto.getPincode());
         request.setBuyer(buyer);
 
-        Address shippingAddress = new Address();
-        shippingAddress.setContactName("Jane Doe");
-        shippingAddress.setCity("Istanbul");
-        shippingAddress.setCountry("Turkey");
-        shippingAddress.setAddress("Nidakule Göztepe, Merdivenköy Mah. Bora Sok. No:1");
-        shippingAddress.setZipCode("34742");
+        Address shippingAddress = toIyzicoAddress(addressDto, cart.getUser().getUserName());
         request.setShippingAddress(shippingAddress);
-
-        Address billingAddress = new Address();
-        billingAddress.setContactName("Jane Doe");
-        billingAddress.setCity("Istanbul");
-        billingAddress.setCountry("Turkey");
-        billingAddress.setAddress("Nidakule Göztepe, Merdivenköy Mah. Bora Sok. No:1");
-        billingAddress.setZipCode("34742");
-        request.setBillingAddress(billingAddress);
-
-        List<BasketItem> basketItems = new ArrayList<BasketItem>();
-        BasketItem firstBasketItem = new BasketItem();
-        firstBasketItem.setId("BI101");
-        firstBasketItem.setName("Binocular");
-        firstBasketItem.setCategory1("Collectibles");
-        firstBasketItem.setCategory2("Accessories");
-        firstBasketItem.setItemType(BasketItemType.PHYSICAL.name());
-        firstBasketItem.setPrice(new BigDecimal("0.3"));
-        basketItems.add(firstBasketItem);
-
-        BasketItem secondBasketItem = new BasketItem();
-        secondBasketItem.setId("BI102");
-        secondBasketItem.setName("Game code");
-        secondBasketItem.setCategory1("Game");
-        secondBasketItem.setCategory2("Online Game Items");
-        secondBasketItem.setItemType(BasketItemType.VIRTUAL.name());
-        secondBasketItem.setPrice(new BigDecimal("0.5"));
-        basketItems.add(secondBasketItem);
-
-        BasketItem thirdBasketItem = new BasketItem();
-        thirdBasketItem.setId("BI103");
-        thirdBasketItem.setName("Usb");
-        thirdBasketItem.setCategory1("Electronics");
-        thirdBasketItem.setCategory2("Usb / Cable");
-        thirdBasketItem.setItemType(BasketItemType.PHYSICAL.name());
-        thirdBasketItem.setPrice(new BigDecimal("0.2"));
-        basketItems.add(thirdBasketItem);
+        request.setBillingAddress(toIyzicoAddress(addressDto, cart.getUser().getUserName()));
         request.setBasketItems(basketItems);
 
         CheckoutFormInitialize checkoutFormInitialize = CheckoutFormInitialize.create(request, options);
 
-        System.out.println(checkoutFormInitialize);
+        if ("success".equalsIgnoreCase(checkoutFormInitialize.getStatus()) && StringUtils.hasText(checkoutFormInitialize.getToken())) {
+            orderService.createPendingIyzicoOrder(email, addressDto.getAddressId(), checkoutFormInitialize.getToken());
+        }
+
+        logger.info("iyzico checkout initialized. conversationId={}, status={}", conversationId, checkoutFormInitialize.getStatus());
 
         return checkoutFormInitialize;
     }
 
+    private Address toIyzicoAddress(AddressDTO source, String contactName) {
+        Address address = new Address();
+        address.setContactName(contactName);
+        address.setCity(source.getCity());
+        address.setCountry(source.getCountry());
+        address.setAddress(String.join(" ", Arrays.asList(source.getStreet(), source.getBuildingName(), source.getState())).trim());
+        address.setZipCode(source.getPincode());
+        return address;
+    }
+
     @Override
-    public String retrieveCheckoutFormResult(String token) {
+    public IyzicoCallbackResult retrieveCheckoutFormResult(String token) {
         Options options = new Options();
         options.setApiKey(iyzicoApiKey);
         options.setSecretKey(iyzicoSecretKey);
@@ -133,20 +152,15 @@ public class IyzicoServiceImpl implements IyzicoService{
         RetrieveCheckoutFormRequest request = new RetrieveCheckoutFormRequest();
         request.setToken(token);
         CheckoutForm checkoutForm = CheckoutForm.retrieve(request, options);
-        System.out.println(checkoutForm);
 
-        String status;
-        if ("success".equals(checkoutForm.getStatus()) && checkoutForm.getErrorCode() == null &&
-                checkoutForm.getErrorMessage() == null && checkoutForm.getErrorGroup() == null) {
-            //token = checkoutForm.getToken();
-            //tokenı vs bilgilerini db tut
-            status = "success";
-        } else {
-            logger.error("Failed to payment. ErrorMessage: ", checkoutForm.getErrorMessage() + " ErrorCode: " +checkoutForm.getErrorCode() + " ErrorGroup: " +checkoutForm.getErrorGroup());
-            // Ödeme başarısız ise React'teki hata sayfasına yönlendir
-            status = "failed";
+        if ("success".equals(checkoutForm.getStatus()) && checkoutForm.getErrorCode() == null && checkoutForm.getErrorMessage() == null && checkoutForm.getErrorGroup() == null) {
+            Long orderId = orderService.completeIyzicoOrder(token, checkoutForm.getPaymentId(), String.valueOf(checkoutForm.getPaidPrice()), checkoutForm.getCurrency(), "Payment successful");
+            return new IyzicoCallbackResult(true, orderId);
         }
 
-        return status;
+        String errorMessage = checkoutForm.getErrorMessage();
+        logger.error("Iyzico payment failed. code={}, group={}, message={}", checkoutForm.getErrorCode(), checkoutForm.getErrorGroup(), errorMessage);
+        orderService.failIyzicoOrder(token, checkoutForm.getPaymentId(), StringUtils.hasText(errorMessage) ? errorMessage : "Payment failed");
+        return new IyzicoCallbackResult(false, null);
     }
 }

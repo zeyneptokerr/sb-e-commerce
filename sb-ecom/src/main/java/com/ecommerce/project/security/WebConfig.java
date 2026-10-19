@@ -13,6 +13,11 @@ public class WebConfig implements WebMvcConfigurer {
 
     @Override
     public void addCorsMappings(CorsRegistry registry) {
+        registry.addMapping("/api/order/iyzico-payment-callback")
+                .allowedOriginPatterns("*")
+                .allowedMethods("POST")
+                .allowedHeaders("*");
+
         registry.addMapping("/**")
                 .allowedOrigins("http://localhost:3000", frontEndUrl)
                 .allowedMethods("GET","POST","PUT","DELETE","OPTIONS")
