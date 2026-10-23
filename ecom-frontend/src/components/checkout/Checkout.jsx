@@ -86,7 +86,9 @@ const Checkout = () => {
         
 
         <div
-            className='flex justify-between items-center px-4 fixed z-50 h-24 bottom-0 bg-white left-0 w-full py-4 border-slate-200'
+            className={`flex justify-between items-center px-4 h-24 bg-white w-full py-4 border-slate-200 ${
+                activeStep === steps.length - 1 ? 'relative mt-4' : 'fixed z-50 bottom-0 left-0'
+            }`}
             style={{ boxShadow: "0 -2px 4px rgba(100, 100, 100, 0.15)" }}>
             <Button
                 variant='outlined'

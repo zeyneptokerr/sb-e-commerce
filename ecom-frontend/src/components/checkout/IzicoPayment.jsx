@@ -1,93 +1,80 @@
-import { Alert, AlertTitle, Skeleton } from '@mui/material'
-import React, { useEffect } from 'react'
-import { useDispatch, useSelector } from 'react-redux'
-import PaymentForm from './PaymentForm';
+import React, { useEffect, useMemo, useRef } from 'react';
+import { Skeleton } from '@mui/material';
+import { useDispatch, useSelector } from 'react-redux';
 import { createIzicoPayment } from '../../store/actions';
-import { useNavigate } from "react-router-dom";
 
 const IzicoPayment = () => {
   const dispatch = useDispatch();
   const { totalPrice } = useSelector((state) => state.carts);
-  const { isLoading, errorMessage } = useSelector((state) => state.errors);
+  const { errorMessage } = useSelector((state) => state.errors);
   const { user, selectedUserCheckoutAddress } = useSelector((state) => state.auth);
   const paymentIzico = useSelector((state) => state.paymentIzico.payload);
-  const navigate = useNavigate();
+  const requestedPayment = useRef(null);
+  const [isIframeLoading, setIsIframeLoading] = React.useState(true);
+
+  const requestKey = `${user?.email ?? ''}:${selectedUserCheckoutAddress?.addressId ?? ''}:${totalPrice}`;
 
   useEffect(() => {
+    if (!user || !selectedUserCheckoutAddress || requestedPayment.current === requestKey) return;
+    requestedPayment.current = requestKey;
+
     const sendData = {
       amount: Number(totalPrice) * 100,
-      currency: "tr",
+      currency: 'tr',
       email: user.email,
       name: user.username,
       address: selectedUserCheckoutAddress,
     };
     dispatch(createIzicoPayment(sendData));
-  }, [dispatch, totalPrice, user, selectedUserCheckoutAddress]);
+  }, [dispatch, requestKey, totalPrice, user, selectedUserCheckoutAddress]);
+
+  const iframeUrl = useMemo(() => {
+    if (!paymentIzico?.paymentPageUrl) return '';
+
+    const url = new URL(paymentIzico.paymentPageUrl);
+    url.searchParams.set('iframe', 'true');
+    return url.toString();
+  }, [paymentIzico?.paymentPageUrl]);
 
   useEffect(() => {
-    if (paymentIzico?.paymentPageUrl) {
-        window.location.href = paymentIzico.paymentPageUrl;
-    }
-  }, [paymentIzico]);
-
-  // useEffect(() => {
-  //   const handleMessage = (event) => {
-
-  //       if (event.data?.type === "IYZICO_PAYMENT_SUCCESS") {
-  //           navigate("/payment-success");
-  //       }
-
-  //       if (event.data?.type === "IYZICO_PAYMENT_FAILED") {
-  //           navigate("/payment-failed");
-  //       }
-  //   };
-
-  //   window.addEventListener("message", handleMessage);
-
-  //   return () => {
-  //       window.removeEventListener("message", handleMessage);
-  //   };
-  // }, [navigate]);
-
-  if (isLoading) {
-    return (
-      <div className='max-w-lg mx-auto'>
-        <Skeleton />
-      </div>
-    )
-  }
-
-  // const iframeUrl = paymentIzico?.paymentPageUrl
-  //       ? `${paymentIzico?.paymentPageUrl}${paymentIzico?.paymentPageUrl.includes("?") ? "&" : "?"}iframe=true`
-  //       : "";
+    if (iframeUrl) setIsIframeLoading(true);
+  }, [iframeUrl]);
 
   return (
-    // <div
-    //   style={{
-    //       width: "100%",
-    //       maxWidth: "1000px",
-    //       margin: "30px auto",
-    //   }}
-    // >
-    //   {iframeUrl ? (
-    //     <iframe
-    //       src={iframeUrl}
-    //       title="iyzico Ödeme Formu"
-    //       style={{
-    //           width: "100%",
-    //           height: "750px",
-    //           border: "none",
-    //       }}
-    //       allow="payment"
-    //     />
-    //   ) : (
-    //       <p>Ödeme ekranı oluşturulamadı.</p>
-    //   )}
-    // </div>
-    <div>
-      <p>deneme</p>
-    </div>
-  )
-}
+    <section className="mx-auto w-full max-w-4xl px-4 pb-28">
+      <h1 className="mb-4 text-xl font-semibold">Güvenli ödeme</h1>
+      {errorMessage ? (
+        <p role="alert" className="rounded-md bg-red-50 p-4 text-red-700">
+          {errorMessage}
+        </p>
+      ) : iframeUrl ? (
+        <div className="relative">
+          {isIframeLoading && (
+            <Skeleton
+              variant="rectangular"
+              animation="wave"
+              className="absolute inset-0 z-10"
+              sx={{ height: 760, borderRadius: 1 }}
+            />
+          )}
+          <iframe
+            src={iframeUrl}
+            title="iyzico ödeme formu"
+            className={`w-full rounded-md border border-slate-200 bg-white ${
+              isIframeLoading ? 'invisible' : 'visible'
+            }`}
+            style={{ height: '760px' }}
+            allow="payment"
+            onLoad={() => setIsIframeLoading(false)}
+          />
+        </div>
+      ) : (
+        <div role="status" aria-label="Ödeme formu yükleniyor">
+          <Skeleton variant="rectangular" animation="wave" height={760} sx={{ borderRadius: 1 }} />
+        </div>
+      )}
+    </section>
+  );
+};
 
 export default IzicoPayment;

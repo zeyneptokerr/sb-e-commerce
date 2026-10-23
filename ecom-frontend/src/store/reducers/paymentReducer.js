@@ -9,6 +9,11 @@ export const paymentReducer = (state = initialState, action) => {
                 ...state,
                 payload: action.payload,
             };
+        case "CLEAR_PAYMENT":
+            return {
+                ...state,
+                payload: null,
+            };
         default:
             return state;
     }

@@ -309,13 +309,14 @@ export const getUserCart = () => async (dispatch, getState) => {
 };
 
 export const createIzicoPayment = (sendData) => async (dispatch, getState) => {
+    dispatch({ type: "CLEAR_PAYMENT" });
     try {
         const { data } = await api.post("/order/iyzico-payment", sendData);
         dispatch({
             type: "ADD_PAYMENT",
             payload: data,
         });
-        console.log(data);
+        dispatch({ type: "IS_SUCCESS" });
     } catch (error) {
         console.log(error);
         dispatch({

@@ -1,4 +1,12 @@
+import { useEffect } from "react";
+
 const PaymentFailed = () => {
+
+  useEffect(() => {
+    if (window.self !== window.top) {
+      window.top.location.replace(window.location.href);
+    }
+  }, []);
     
   return (
     <div className='max-w-md mx-auto p-5 bg-white shadow-md rounded-lg mt-16 border'>
