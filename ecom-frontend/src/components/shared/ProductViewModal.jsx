@@ -3,6 +3,7 @@ import { Divider } from '@mui/material';
 import { useState } from 'react'
 import Status from './Status';
 import { MdClose, MdDone } from 'react-icons/md';
+import { productImageUrl } from "../../utils/productImageUrl";
 
 function ProductViewModal({open, setOpen, product, isAvailable}) {
   
@@ -24,7 +25,7 @@ function ProductViewModal({open, setOpen, product, isAvailable}) {
                 {image && (
                     <div className='flex justify-center aspect-3/2'>
                     <img 
-                    src={'https://embarkx.com/sample/placeholder.png'}
+                    src={productImageUrl(image)}
                     alt={productName} />
                     </div>
                 )}

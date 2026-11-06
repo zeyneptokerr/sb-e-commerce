@@ -5,6 +5,7 @@ import { truncateText } from "../../utils/truncateText";
 import { useDispatch } from "react-redux";
 import { addToCart } from "../../store/actions";
 import { toast } from "react-hot-toast";
+import { productImageUrl } from "../../utils/productImageUrl";
 
 const ProductCard = ( {
         productId,
@@ -52,8 +53,7 @@ const ProductCard = ( {
                 className="w-full overflow-hidden aspect-[3/2]">
                 <img 
                     className="w-full h-full cursor-pointer transition-transform duration-300 transform hover:scale-105"
-                    // src={image}
-                    src={'https://embarkx.com/sample/placeholder.png'}
+                    src={productImageUrl(image)}
                     alt={productName}>
                 </img>
             </div>
