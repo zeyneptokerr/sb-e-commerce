@@ -13,6 +13,7 @@ const ProductDetail = () => {
     const { productId } = useParams();
     const dispatch = useDispatch();
     const [product, setProduct] = useState(null);
+    const [comments, setComments] = useState([]);
     const [loading, setLoading] = useState(true);
     const [error, setError] = useState("");
 
@@ -20,7 +21,14 @@ const ProductDetail = () => {
         let active = true;
         setLoading(true);
         api.get(`/public/products/${productId}`)
-            .then(({ data }) => { if (active) setProduct(data); })
+            .then(async ({ data }) => {
+                if (!active) return;
+                setProduct(data);
+                try {
+                    const commentsResponse = await api.get(`/public/products/${productId}/comments`);
+                    if (active) setComments(commentsResponse.data);
+                } catch { if (active) setComments([]); }
+            })
             .catch((err) => { if (active) setError(err?.response?.data?.message || "Ürün bilgileri yüklenemedi."); })
             .finally(() => { if (active) setLoading(false); });
         return () => { active = false; };
@@ -62,6 +70,16 @@ const ProductDetail = () => {
                     <FaShoppingCart /> {available ? "Sepete ekle" : "Stokta yok"}
                 </button>
             </div>
+        </section>
+        <section className="mt-8 rounded-2xl border border-slate-200 bg-white p-6 shadow-sm sm:p-8">
+            <h2 className="text-xl font-bold text-slate-900">Ürün yorumları <span className="text-base font-normal text-slate-500">({comments.length})</span></h2>
+            {comments.length === 0 ? <p className="mt-4 text-sm text-slate-500">Bu ürün için henüz yorum yapılmamış.</p> : <div className="mt-5 divide-y divide-slate-200">
+                {comments.map((comment) => <article key={comment.commentId} className="py-5 first:pt-0 last:pb-0">
+                    <div className="flex flex-wrap items-center justify-between gap-2"><p className="font-semibold text-slate-800">{comment.userName}</p><time className="text-sm text-slate-500">{new Date(comment.createdAt).toLocaleDateString("tr-TR")}</time></div>
+                    <p className="mt-2 whitespace-pre-line text-slate-700">{comment.commentText}</p>
+                    {comment.images?.length > 0 && <div className="mt-3 flex flex-wrap gap-2">{comment.images.map((image, index) => <img key={`${comment.commentId}-${index}`} src={productImageUrl(image)} alt="Yorum görseli" className="h-20 w-20 rounded border border-slate-200 object-cover" />)}</div>}
+                </article>)}
+            </div>}
         </section>
     </main>;
 };

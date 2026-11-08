@@ -6,6 +6,7 @@ import { getUserOrders } from "../../store/actions";
 import { formatPrice } from "../../utils/formatPrice";
 import Paginations from "../shared/Paginations";
 import { productImageUrl } from "../../utils/productImageUrl";
+import ProductCommentForm from "./ProductCommentForm";
 
 const UserOrders = () => {
     const dispatch = useDispatch();
@@ -14,6 +15,8 @@ const UserOrders = () => {
     const { isLoading, errorMessage } = useSelector((state) => state.errors);
     const page = Math.max(1, Number(searchParams.get("page") || 1));
     const [expandedOrders, setExpandedOrders] = useState({});
+    const [reviewingProduct, setReviewingProduct] = useState(null);
+    const [reviewedProducts, setReviewedProducts] = useState({});
 
     useEffect(() => {
         const params = new URLSearchParams({
@@ -100,6 +103,8 @@ const UserOrders = () => {
                                         {(order.orderItems || []).map((item) => {
                                             const product = item.product;
                                             const productHref = product?.productId ? `/products/${product.productId}` : null;
+                                            const reviewKey = `${order.orderId}-${product?.productId}`;
+                                            const isDelivered = order.orderStatus?.toLowerCase() === "delivered";
                                             return <article key={item.orderItemId} className="flex flex-col gap-4 rounded-md border border-slate-200 bg-white p-3 sm:flex-row sm:items-center">
                                                 {productHref ? <Link to={productHref} aria-label={`${product.productName} ürün detayına git`} className="h-24 w-20 shrink-0 overflow-hidden rounded border border-slate-200 p-1">
                                                     <img src={productImageUrl(product.image)} alt={product.productName || "Sipariş ürünü"} className="h-full w-full object-contain" />
@@ -111,7 +116,12 @@ const UserOrders = () => {
                                                     <p className="mt-1 text-sm text-slate-600">Satıcı: <span className="font-medium text-slate-800">{product?.sellerName || "Belirtilmemiş"}</span></p>
                                                     <p className="mt-1 font-semibold text-orange-600">{formatPrice(Number(item.orderedProductPrice) * Number(item.quantity))}</p>
                                                 </div>
-                                                {productHref && <Link to={productHref} className="shrink-0 rounded border border-orange-500 px-4 py-2 text-center text-sm font-semibold text-orange-600 hover:bg-orange-50">Ürüne git</Link>}
+                                                <div className="flex shrink-0 flex-col gap-2 sm:ml-auto">
+                                                    {productHref && <Link to={productHref} className="rounded border border-orange-500 px-4 py-2 text-center text-sm font-semibold text-orange-600 hover:bg-orange-50">Ürüne git</Link>}
+                                                    {isDelivered && productHref && (reviewedProducts[reviewKey] ? <span className="text-center text-sm font-medium text-emerald-700">Yorum eklendi</span> : <button type="button" onClick={() => setReviewingProduct(reviewingProduct === reviewKey ? null : reviewKey)} className="rounded border border-slate-300 px-4 py-2 text-sm font-medium text-slate-700 hover:bg-slate-50">{reviewingProduct === reviewKey ? "Yorumu kapat" : "Ürünü değerlendir"}</button>)}
+                                                </div>
+                                                {isDelivered && reviewingProduct === reviewKey && !reviewedProducts[reviewKey] && <ProductCommentForm deliveryNo={order.orderId} productId={product.productId}
+                                                    onCancel={() => setReviewingProduct(null)} onSubmitted={() => { setReviewedProducts((current) => ({ ...current, [reviewKey]: true })); setReviewingProduct(null); }} />}
                                             </article>;
                                         })}
                                     </div>
