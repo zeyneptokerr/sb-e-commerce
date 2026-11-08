@@ -6,6 +6,8 @@ import com.ecommerce.project.model.*;
 import com.ecommerce.project.payload.OrderDTO;
 import com.ecommerce.project.payload.OrderItemDTO;
 import com.ecommerce.project.payload.OrderResponse;
+import com.ecommerce.project.payload.AddressDTO;
+import com.ecommerce.project.payload.ProductDTO;
 import com.ecommerce.project.repositories.*;
 import com.ecommerce.project.util.AuthUtil;
 import jakarta.transaction.Transactional;
@@ -236,7 +238,7 @@ public class OrderServiceImpl implements OrderService{
         Pageable pageDetails = PageRequest.of(pageNumber, pageSize);
         Page<Order> pageOrders = orderRepository.findByEmailOrderByOrderDateDescOrderIdDesc(email, pageDetails);
 
-        List<OrderDTO> orderDTOs = pageOrders.getContent().stream().map(order -> modelMapper.map(order, OrderDTO.class)).toList();
+        List<OrderDTO> orderDTOs = pageOrders.getContent().stream().map(this::toUserOrderDTO).toList();
 
         OrderResponse response = new OrderResponse();
         response.setContent(orderDTOs);
@@ -246,6 +248,23 @@ public class OrderServiceImpl implements OrderService{
         response.setTotalPages(pageOrders.getTotalPages());
         response.setLastPage(pageOrders.isLast());
         return response;
+    }
+
+    private OrderDTO toUserOrderDTO(Order order) {
+        OrderDTO orderDTO = modelMapper.map(order, OrderDTO.class);
+        if (order.getAddress() != null) {
+            orderDTO.setDeliveryAddress(modelMapper.map(order.getAddress(), AddressDTO.class));
+        }
+        if (orderDTO.getOrderItems() != null && order.getOrderItems() != null) {
+            for (int i = 0; i < Math.min(orderDTO.getOrderItems().size(), order.getOrderItems().size()); i++) {
+                Product product = order.getOrderItems().get(i).getProduct();
+                if (product != null && orderDTO.getOrderItems().get(i).getProduct() != null) {
+                    ProductDTO productDTO = orderDTO.getOrderItems().get(i).getProduct();
+                    productDTO.setSellerName(product.getUser() != null ? product.getUser().getUserName() : null);
+                }
+            }
+        }
+        return orderDTO;
     }
 
     @Override

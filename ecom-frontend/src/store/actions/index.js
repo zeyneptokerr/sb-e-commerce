@@ -69,7 +69,8 @@ export const addToCart = (data, qty = 1, toast) =>
             (item) => item.productId === data.productId
         );
         const nextQuantity = (existingCartItem?.quantity ?? 0) + qty;
-        const isQuantityAvailable = product && product.quantity >= nextQuantity;
+        const availableQuantity = product?.quantity ?? data.quantity;
+        const isQuantityAvailable = Number(availableQuantity) >= nextQuantity;
 
         if (isQuantityAvailable) {
             dispatch({

@@ -22,6 +22,7 @@ import Category from './components/admin/categories/Category';
 import Orders from './components/admin/orders/Orders';
 import UserOrders from './components/orders/UserOrders';
 import Profile from './components/profile/Profile';
+import ProductDetail from './components/products/ProductDetail';
 
 
 function App() {
@@ -32,6 +33,7 @@ function App() {
         <Navbar />
         <Routes>
           <Route path="/products" element={<Products />} />
+          <Route path="/products/:productId" element={<ProductDetail />} />
           <Route path="/" element={<Home />} />
           <Route path="/about" element={<About />} /> 
           <Route path="/contact" element={<Contact />} />

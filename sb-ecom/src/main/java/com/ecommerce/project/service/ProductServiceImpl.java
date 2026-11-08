@@ -122,6 +122,15 @@ public class ProductServiceImpl implements ProductService {
         return productResponse;
     }
 
+    @Override
+    public ProductDTO getProductById(Long productId) {
+        Product product = productRepository.findById(productId).orElseThrow(
+                () -> new ResourceNotFoundException("Product", "productId", productId));
+        ProductDTO productDTO = modelMapper.map(product, ProductDTO.class);
+        productDTO.setSellerName(product.getUser() != null ? product.getUser().getUserName() : null);
+        return productDTO;
+    }
+
     private String constructImageUrl(String imageName) {
         return imageBaseUrl.endsWith("/") ? imageBaseUrl + imageName : imageBaseUrl + "/" + imageName;
     }

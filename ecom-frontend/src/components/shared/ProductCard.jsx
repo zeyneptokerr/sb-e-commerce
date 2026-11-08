@@ -1,11 +1,10 @@
-import { useState } from "react"; 
 import { FaShoppingCart } from "react-icons/fa";
-import ProductViewModal from "./ProductViewModal";
 import { truncateText } from "../../utils/truncateText";
 import { useDispatch } from "react-redux";
 import { addToCart } from "../../store/actions";
 import { toast } from "react-hot-toast";
 import { productImageUrl } from "../../utils/productImageUrl";
+import { useNavigate } from "react-router-dom";
 
 const ProductCard = ( {
         productId,
@@ -19,18 +18,12 @@ const ProductCard = ( {
         about = false,
     } ) => {
     
-    const [openProducViewModal, setOpenProductViewModal] = useState(false);
     const btnLoader = false;
-    const [selectedViewProduct, setSelectedViewProduct] = useState("");
     const isAvailable = quantity && Number(quantity) > 0;
     const dispatch = useDispatch();
+    const navigate = useNavigate();
 
-    const handleProductView = (product) => {
-        if (!about) {
-            setSelectedViewProduct(product);
-            setOpenProductViewModal(true);
-        }
-    };
+    const handleProductView = () => !about && navigate(`/products/${productId}`);
 
     const addToCartHandler = (cartItems) => {
         dispatch(addToCart(cartItems, 1, toast));
@@ -38,19 +31,9 @@ const ProductCard = ( {
 
     return (
         <div className="border rounded-lg shadow-xl overflow-hidden transition-shadow duration-300">
-            <div onClick={() => {
-                    handleProductView({
-                        id : productId,
-                        productName,
-                        image,
-                        description,
-                        quantity,
-                        price,
-                        discount,
-                        specialPrice
-                    })
-                }} 
-                className="w-full overflow-hidden aspect-[3/2]">
+            <div onClick={handleProductView} role={!about ? "link" : undefined} tabIndex={!about ? 0 : undefined}
+                onKeyDown={(event) => event.key === "Enter" && handleProductView()}
+                className={`w-full overflow-hidden aspect-[3/2] ${!about ? "cursor-pointer" : ""}`}>
                 <img 
                     className="w-full h-full cursor-pointer transition-transform duration-300 transform hover:scale-105"
                     src={productImageUrl(image)}
@@ -58,18 +41,7 @@ const ProductCard = ( {
                 </img>
             </div>
             <div className="p-4">
-                <h2 onClick={() => {
-                        handleProductView({
-                            id : productId,
-                            productName,
-                            image,
-                            description,
-                            quantity,
-                            price,
-                            discount,
-                            specialPrice
-                        })
-                    }}
+                <h2 onClick={handleProductView}
                     className="text-lg font-semibold mb-2 cursor-pointer">
                     {truncateText(productName, 50)}
                 </h2>
@@ -118,12 +90,6 @@ const ProductCard = ( {
                     </div>
                 )}
             </div>
-            <ProductViewModal
-                open={openProducViewModal}
-                setOpen={setOpenProductViewModal}
-                product={selectedViewProduct}
-                isAvailable={isAvailable}
-            />
         </div>
     )
 }

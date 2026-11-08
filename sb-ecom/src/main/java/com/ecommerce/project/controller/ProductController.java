@@ -44,6 +44,11 @@ public class ProductController {
         return new ResponseEntity<>(productResponse, HttpStatus.OK);
     }
 
+    @GetMapping("/public/products/{productId}")
+    public ResponseEntity<ProductDTO> getProductById(@PathVariable Long productId) {
+        return ResponseEntity.ok(productService.getProductById(productId));
+    }
+
     @GetMapping("/public/categories/{categoryId}/products")
     public ResponseEntity<ProductResponse> getAllProductsByCategory(@PathVariable Long categoryId,
                                                                     @RequestParam(name = "pageNumber", defaultValue = AppConstants.PAGE_NUMBER, required = false) Integer pageNumber,
