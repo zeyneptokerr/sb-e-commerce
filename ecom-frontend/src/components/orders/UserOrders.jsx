@@ -7,6 +7,7 @@ import { formatPrice } from "../../utils/formatPrice";
 import Paginations from "../shared/Paginations";
 import { productImageUrl } from "../../utils/productImageUrl";
 import ProductCommentForm from "./ProductCommentForm";
+import api from "../../api/api";
 
 const UserOrders = () => {
     const dispatch = useDispatch();
@@ -15,8 +16,9 @@ const UserOrders = () => {
     const { isLoading, errorMessage } = useSelector((state) => state.errors);
     const page = Math.max(1, Number(searchParams.get("page") || 1));
     const [expandedOrders, setExpandedOrders] = useState({});
+    const [reviewExpandedOrders, setReviewExpandedOrders] = useState({});
     const [reviewingProduct, setReviewingProduct] = useState(null);
-    const [reviewedProducts, setReviewedProducts] = useState({});
+    const [existingComments, setExistingComments] = useState({});
 
     useEffect(() => {
         const params = new URLSearchParams({
@@ -25,6 +27,26 @@ const UserOrders = () => {
         });
         dispatch(getUserOrders(params.toString()));
     }, [dispatch, page]);
+
+    useEffect(() => {
+        let active = true;
+        if (!userOrders.length) {
+            setExistingComments({});
+            return () => { active = false; };
+        }
+        Promise.all(userOrders.map((order) => api.get(`/comments/orders/${order.orderId}`)
+            .then(({ data }) => data)
+            .catch(() => [])))
+            .then((ordersComments) => {
+                if (!active) return;
+                const mappedComments = {};
+                ordersComments.flat().forEach((comment) => {
+                    mappedComments[`${comment.deliveryNo}-${comment.productId}`] = comment;
+                });
+                setExistingComments(mappedComments);
+            });
+        return () => { active = false; };
+    }, [userOrders]);
 
     return (
         <main className="mx-auto min-h-[calc(100vh-70px)] max-w-5xl px-4 py-10 sm:px-8">
@@ -76,7 +98,11 @@ const UserOrders = () => {
                                             })}
                                         </div>
                                     </div>
-                                    <span className="rounded border border-orange-500 px-5 py-2 text-sm font-semibold text-orange-600">{order.orderStatus || "Sipariş durumu"}</span>
+                                    <button type="button" aria-expanded={Boolean(reviewExpandedOrders[order.orderId])}
+                                        onClick={() => setReviewExpandedOrders((current) => ({ ...current, [order.orderId]: !current[order.orderId] }))}
+                                        className="rounded border border-orange-500 px-5 py-2 text-sm font-semibold text-orange-600 hover:bg-orange-50">
+                                        {reviewExpandedOrders[order.orderId] ? "Değerlendirmeyi kapat" : "Değerlendir"}
+                                    </button>
                                 </div>
 
                                 {expandedOrders[order.orderId] && <section className="border-t border-slate-200 bg-slate-50/60 p-4 sm:p-5">
@@ -103,8 +129,6 @@ const UserOrders = () => {
                                         {(order.orderItems || []).map((item) => {
                                             const product = item.product;
                                             const productHref = product?.productId ? `/products/${product.productId}` : null;
-                                            const reviewKey = `${order.orderId}-${product?.productId}`;
-                                            const isDelivered = order.orderStatus?.toLowerCase() === "delivered";
                                             return <article key={item.orderItemId} className="flex flex-col gap-4 rounded-md border border-slate-200 bg-white p-3 sm:flex-row sm:items-center">
                                                 {productHref ? <Link to={productHref} aria-label={`${product.productName} ürün detayına git`} className="h-24 w-20 shrink-0 overflow-hidden rounded border border-slate-200 p-1">
                                                     <img src={productImageUrl(product.image)} alt={product.productName || "Sipariş ürünü"} className="h-full w-full object-contain" />
@@ -116,17 +140,44 @@ const UserOrders = () => {
                                                     <p className="mt-1 text-sm text-slate-600">Satıcı: <span className="font-medium text-slate-800">{product?.sellerName || "Belirtilmemiş"}</span></p>
                                                     <p className="mt-1 font-semibold text-orange-600">{formatPrice(Number(item.orderedProductPrice) * Number(item.quantity))}</p>
                                                 </div>
-                                                <div className="flex shrink-0 flex-col gap-2 sm:ml-auto">
-                                                    {productHref && <Link to={productHref} className="rounded border border-orange-500 px-4 py-2 text-center text-sm font-semibold text-orange-600 hover:bg-orange-50">Ürüne git</Link>}
-                                                    {isDelivered && productHref && (reviewedProducts[reviewKey] ? <span className="text-center text-sm font-medium text-emerald-700">Yorum eklendi</span> : <button type="button" onClick={() => setReviewingProduct(reviewingProduct === reviewKey ? null : reviewKey)} className="rounded border border-slate-300 px-4 py-2 text-sm font-medium text-slate-700 hover:bg-slate-50">{reviewingProduct === reviewKey ? "Yorumu kapat" : "Ürünü değerlendir"}</button>)}
-                                                </div>
-                                                {isDelivered && reviewingProduct === reviewKey && !reviewedProducts[reviewKey] && <ProductCommentForm deliveryNo={order.orderId} productId={product.productId}
-                                                    onCancel={() => setReviewingProduct(null)} onSubmitted={() => { setReviewedProducts((current) => ({ ...current, [reviewKey]: true })); setReviewingProduct(null); }} />}
+                                                {productHref && <Link to={productHref} className="shrink-0 rounded border border-orange-500 px-4 py-2 text-center text-sm font-semibold text-orange-600 hover:bg-orange-50">Ürüne git</Link>}
                                             </article>;
                                         })}
                                     </div>
                                     <div className="mt-4 flex justify-end rounded-md border border-slate-200 bg-white px-4 py-3 text-sm">
                                         <span className="text-slate-600">Sipariş toplamı&nbsp;</span><strong className="text-slate-900">{formatPrice(order.totalAmount)}</strong>
+                                    </div>
+                                </section>}
+                                {reviewExpandedOrders[order.orderId] && <section className="border-t border-slate-200 bg-slate-50/60 p-4 sm:p-5">
+                                    <h3 className="mb-3 text-base font-semibold text-slate-800">Sipariş ürünleri</h3>
+                                    {order.orderStatus?.toLowerCase() !== "delivered" && <p className="mb-3 rounded-md bg-amber-50 px-4 py-3 text-sm text-amber-800">Ürünleri teslim aldıktan sonra değerlendirebilirsiniz.</p>}
+                                    <div className="space-y-3">
+                                        {(order.orderItems || []).map((item) => {
+                                            const product = item.product;
+                                            const productHref = product?.productId ? `/products/${product.productId}` : null;
+                                            const reviewKey = `${order.orderId}-${product?.productId}`;
+                                            const isDelivered = order.orderStatus?.toLowerCase() === "delivered";
+                                            return <article key={item.orderItemId} className="flex flex-wrap items-center gap-4 rounded-md border border-slate-200 bg-white p-3">
+                                                {productHref ? <Link to={productHref} className="h-20 w-16 shrink-0 rounded border border-slate-200 p-1" aria-label={`${product.productName} ürün detayına git`}>
+                                                    <img src={productImageUrl(product.image)} alt={product.productName || "Sipariş ürünü"} className="h-full w-full object-contain" />
+                                                </Link> : <div className="h-20 w-16 shrink-0 rounded border border-slate-200 bg-slate-50" />}
+                                                <div className="min-w-0 flex-1">
+                                                    <p className="font-medium text-slate-800">{product?.productName || "Ürün bilgisi mevcut değil"}</p>
+                                                    <p className="mt-1 text-sm text-slate-500">Adet: {item.quantity}</p>
+                                                    <p className="mt-1 font-semibold text-orange-600">{formatPrice(Number(item.orderedProductPrice) * Number(item.quantity))}</p>
+                                                </div>
+                                                {existingComments[reviewKey] && reviewingProduct !== reviewKey ? <span className="text-sm font-medium text-emerald-700">Yorumunuz mevcut</span> : null}
+                                                <button type="button" disabled={!isDelivered || !product?.productId}
+                                                    onClick={() => setReviewingProduct(reviewingProduct === reviewKey ? null : reviewKey)}
+                                                    className="rounded border border-orange-500 px-4 py-2 text-sm font-semibold text-orange-600 hover:bg-orange-50 disabled:cursor-not-allowed disabled:border-slate-300 disabled:text-slate-400">
+                                                    {reviewingProduct === reviewKey ? "Yorumu kapat" : existingComments[reviewKey] ? "Yorumunu düzenle" : "Ürünü değerlendir"}
+                                                </button>
+                                                {isDelivered && reviewingProduct === reviewKey && <ProductCommentForm key={`${reviewKey}-${existingComments[reviewKey]?.commentId || "new"}`} deliveryNo={order.orderId} productId={product.productId} existingComment={existingComments[reviewKey]}
+                                                    onCancel={() => setReviewingProduct(null)}
+                                                    onSubmitted={(savedComment) => { setExistingComments((current) => ({ ...current, [reviewKey]: savedComment })); setReviewingProduct(null); }}
+                                                    onDeleted={() => { setExistingComments((current) => { const next = { ...current }; delete next[reviewKey]; return next; }); setReviewingProduct(null); }} />}
+                                            </article>;
+                                        })}
                                     </div>
                                 </section>}
                             </article>

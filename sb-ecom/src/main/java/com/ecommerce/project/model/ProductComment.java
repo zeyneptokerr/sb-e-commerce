@@ -43,6 +43,10 @@ public class ProductComment {
     @Column(nullable = false, length = 4000)
     private String commentText;
 
+    private Integer rating;
+
+    private Boolean usernameVisible = false;
+
     @OneToMany(mappedBy = "comment", cascade = CascadeType.ALL, orphanRemoval = true)
     private List<ImagesForComment> images = new ArrayList<>();
 }

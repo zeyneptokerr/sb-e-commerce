@@ -16,5 +16,8 @@ public class ProductCommentDTO {
     private Long deliveryNo;
     private LocalDateTime createdAt;
     private String commentText;
+    private Integer rating;
+    private Boolean usernameVisible;
     private List<String> images;
+    private List<ProductCommentImageDTO> imageDetails;
 }
