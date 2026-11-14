@@ -20,6 +20,7 @@ import org.springframework.data.domain.Sort;
 import org.springframework.stereotype.Service;
 
 import java.time.LocalDate;
+import java.math.BigDecimal;
 import java.util.ArrayList;
 import java.util.List;
 
@@ -114,7 +115,7 @@ public class OrderServiceImpl implements OrderService{
 
     @Transactional
     @Override
-    public void createPendingIyzicoOrder(String emailId, Long addressId, String iyzicoToken) {
+    public void createPendingIyzicoOrder(String emailId, Long addressId, String iyzicoToken, BigDecimal payableAmount) {
         Cart cart = cartRepository.findCartByEmail(emailId);
         if (cart == null || cart.getCartItems() == null || cart.getCartItems().isEmpty()) {
             throw new APIException("Cart is empty.");
@@ -132,7 +133,7 @@ public class OrderServiceImpl implements OrderService{
         Order order = new Order();
         order.setEmail(emailId);
         order.setOrderDate(LocalDate.now());
-        order.setTotalAmount(cart.getTotalPrice());
+        order.setTotalAmount(payableAmount.doubleValue());
         order.setOrderStatus("Payment Pending");
         order.setAddress(address);
         order.setPayment(payment);

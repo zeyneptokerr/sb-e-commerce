@@ -3,12 +3,13 @@ package com.ecommerce.project.service;
 import com.ecommerce.project.payload.OrderDTO;
 import com.ecommerce.project.payload.OrderResponse;
 import jakarta.transaction.Transactional;
+import java.math.BigDecimal;
 
 public interface OrderService {
     @Transactional
     OrderDTO placeOrder(String emailId, Long addressId, String paymentMethod, String pgName, String pgPaymentId, String pgStatus, String pgResponseMessage);
 
-    void createPendingIyzicoOrder(String emailId, Long addressId, String iyzicoToken);
+    void createPendingIyzicoOrder(String emailId, Long addressId, String iyzicoToken, BigDecimal payableAmount);
 
     Long completeIyzicoOrder(String iyzicoToken, String pgPaymentId, String paidPrice, String currency, String responseMessage);
 

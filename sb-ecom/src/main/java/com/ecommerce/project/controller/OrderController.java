@@ -5,7 +5,12 @@ import com.ecommerce.project.payload.*;
 import com.ecommerce.project.service.IyzicoService;
 import com.ecommerce.project.service.OrderService;
 import com.ecommerce.project.util.AuthUtil;
-import com.iyzipay.model.CheckoutFormInitialize;
+import com.ecommerce.project.payload.Iyzico3dsInitResponse;
+import com.ecommerce.project.payload.Iyzico3dsPaymentRequest;
+import com.ecommerce.project.payload.IyzicoInstallmentQueryRequest;
+import com.ecommerce.project.payload.IyzicoInstallmentResponse;
+import org.springframework.util.MultiValueMap;
+import jakarta.servlet.http.HttpServletRequest;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.http.HttpStatus;
@@ -44,14 +49,27 @@ public class OrderController {
     }
 
     @PostMapping("/order/iyzico-payment")
-    public ResponseEntity<CheckoutFormInitialize> createIyzicoPayment(@RequestBody IyzicoPaymentDto iyzicoPaymentDto) {
-        CheckoutFormInitialize checkoutFormInitialize = iyzicoService.initializeCheckoutForm(authUtil.loggedInEmail(), iyzicoPaymentDto);
-        return new ResponseEntity<>(checkoutFormInitialize, HttpStatus.CREATED);
+    public ResponseEntity<Iyzico3dsInitResponse> createIyzicoPayment(
+            @RequestBody Iyzico3dsPaymentRequest paymentRequest, HttpServletRequest httpRequest) {
+        Iyzico3dsInitResponse response = iyzicoService.initialize3dsPayment(
+                authUtil.loggedInEmail(), httpRequest.getRemoteAddr(), paymentRequest);
+        return new ResponseEntity<>(response, HttpStatus.CREATED);
     }
 
-    @PostMapping(value = "/order/iyzico-payment-callback", produces = MediaType.TEXT_HTML_VALUE)
-    public RedirectView iyzicoCallBack(@RequestParam("token") String token) {
-        IyzicoCallbackResult result = iyzicoService.retrieveCheckoutFormResult(token);
+    @PostMapping("/order/iyzico-installments")
+    public ResponseEntity<IyzicoInstallmentResponse> getIyzicoInstallments(
+            @RequestBody IyzicoInstallmentQueryRequest queryRequest) {
+        return ResponseEntity.ok(iyzicoService.getInstallmentOptions(authUtil.loggedInEmail(), queryRequest));
+    }
+
+    @PostMapping(value = "/order/iyzico-payment-callback", consumes = MediaType.APPLICATION_FORM_URLENCODED_VALUE)
+    public RedirectView iyzicoCallBack(@RequestParam MultiValueMap<String, String> callbackParams) {
+        IyzicoCallbackResult result = iyzicoService.complete3dsPayment(
+                callbackParams.getFirst("status"),
+                callbackParams.getFirst("paymentId"),
+                callbackParams.getFirst("conversationData"),
+                callbackParams.getFirst("conversationId"),
+                callbackParams.getFirst("mdStatus"));
         String baseUrl = frontendUrl.replaceAll("/+$", "");
         String targetUrl = result.successful()
                 ? baseUrl + "/payment-success?orderId=" + result.orderId()

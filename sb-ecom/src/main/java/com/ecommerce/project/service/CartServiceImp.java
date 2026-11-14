@@ -129,7 +129,14 @@ public class CartServiceImp implements CartService {
         cart.getCartItems().forEach(c ->
                 c.getProduct().setQuantity(c.getQuantity()));
         List<ProductDTO> products = cart.getCartItems().stream()
-                .map(p -> modelMapper.map(p.getProduct(), ProductDTO.class))
+                .map(p -> {
+                    Product product = p.getProduct();
+                    ProductDTO productDTO = modelMapper.map(product, ProductDTO.class);
+                    productDTO.setQuantity(p.getQuantity());
+                    productDTO.setSellerName(product.getUser() != null ? product.getUser().getUserName() : null);
+                    productDTO.setSellerId(product.getUser() != null ? product.getUser().getUserId() : null);
+                    return productDTO;
+                })
                 .toList();
         cartDTO.setProducts(products);
         return cartDTO;

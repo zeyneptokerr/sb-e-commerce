@@ -11,8 +11,8 @@ const AddressInfoModal = ({ open, setOpen, children }) => {
         {/* Full-screen container to center the panel */}
         <div className="fixed inset-0 flex w-screen items-center justify-center p-4">
           {/* The actual dialog panel  */}
-          <DialogPanel className="relative w-full max-w-md mx-auto transform overflow-hidden bg-white rounded-lg shadow-xl transition-all">
-            <div className='px-6 py-6'>
+          <DialogPanel className="relative w-full max-w-xl mx-auto transform overflow-hidden bg-white rounded-lg shadow-xl transition-all">
+            <div className='max-h-[88vh] overflow-y-auto px-6 py-6'>
                 {children}
             </div>
             <div className='flex justify-end gap-4 absolute right-4 top-2'>

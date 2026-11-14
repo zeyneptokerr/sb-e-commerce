@@ -3,7 +3,6 @@ import { productReducer } from './ProductReducer';
 import { errorReducer } from './errorReducer';
 import { cartReducer } from './cartReducer';
 import { authReducer } from './authReducer';
-import { paymentMethodReducer } from './paymentMethodReducer';
 import { paymentReducer } from './paymentReducer';
 import { adminReducer } from './adminReducer';
 import { orderReducer } from './orderReducer';
@@ -32,7 +31,6 @@ export const store = configureStore({
         errors: errorReducer,
         carts: cartReducer,
         auth: authReducer,
-        payment: paymentMethodReducer,
         paymentIzico: paymentReducer,
         admin: adminReducer,
         order: orderReducer,

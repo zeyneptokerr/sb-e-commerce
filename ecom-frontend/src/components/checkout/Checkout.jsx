@@ -1,128 +1,63 @@
-import { Button, Step, StepLabel, Stepper } from '@mui/material';
-import React, { useEffect, useState } from 'react'
+import React, { useEffect, useMemo, useState } from 'react'
 import AddressInfo from './AddressInfo';
 import { useDispatch, useSelector } from 'react-redux';
-import { getUserAddresses } from '../../store/actions';
-import toast from 'react-hot-toast';
+import { createUserCart, getUserAddresses } from '../../store/actions';
 import Skeleton from '../shared/Skeleton';
 import ErrorPage from '../shared/ErrorPage';
-import PaymentMethod from './PaymentMethod';
-import OrderSummary from './OrderSummary';
 import IzicoPayment from './IzicoPayment';
-// import PaypalPayment from './PaypalPayment';
 
 const Checkout = () => {
-    const [activeStep, setActiveStep] = useState(0);
+    const [cartReady, setCartReady] = useState(false);
+    const [addressesLoaded, setAddressesLoaded] = useState(false);
     const dispatch = useDispatch();
-    const { isLoading, errorMessage } = useSelector((state) => state.errors);
-    const { cart, totalPrice } = useSelector((state) => state.carts);
+    const { errorMessage } = useSelector((state) => state.errors);
+    const { cart } = useSelector((state) => state.carts);
+    const selectedCart = useMemo(() => cart.filter((item) => item.selected !== false), [cart]);
+    const selectedTotal = selectedCart.reduce((sum, item) => sum + Number(item.specialPrice ?? item.price) * Number(item.quantity), 0);
+    const selectedCartKey = selectedCart.map((item) => `${item.productId}:${item.quantity}`).join(",");
     const { address, selectedUserCheckoutAddress } = useSelector(
         (state) => state.auth
     )
-    const { paymentMethod } = useSelector((state) => state.payment);
-
-    const handleBack = () => {
-        setActiveStep((prevStep) => prevStep - 1);
-    };
-
-    const handleNext = () => {
-        if(activeStep === 0 && !selectedUserCheckoutAddress) {
-            toast.error("Please select checkout address before proceeding.");
-            return;
-        }
-
-        if(activeStep === 1 && (!selectedUserCheckoutAddress || !paymentMethod)) {
-            toast.error("Please select payment address before proceeding.");
-            return;
-        }
-        
-        setActiveStep((prevStep) => prevStep + 1);
-    };
-
-    const steps = [
-        "Address",
-        "Payment Method",
-        "Order Summary",
-        "Payment",
-    ];
-    
     useEffect(() => {
-        dispatch(getUserAddresses());
+        let active = true;
+        dispatch(getUserAddresses()).finally(() => {
+            if (active) setAddressesLoaded(true);
+        });
+        return () => { active = false; };
     }, [dispatch]);
 
-  return (
-    <div className='py-14 min-h-[calc(100vh-100px)]'>
-        <Stepper activeStep={activeStep} alternativeLabel>
-            {steps.map((label, index) => (
-                <Step key={index}>
-                    <StepLabel>{label}</StepLabel>
-                </Step>
-            ))}
-        </Stepper>
+    useEffect(() => {
+        let active = true;
+        if (!selectedCart.length) {
+            setCartReady(false);
+            return () => { active = false; };
+        }
+        setCartReady(false);
+        dispatch(createUserCart(selectedCart.map(({ productId, quantity }) => ({ productId, quantity }))))
+            .then((success) => {
+                if (!active) return;
+                setCartReady(success);
+                if (success) dispatch({ type: "IS_SUCCESS" });
+            });
+        return () => { active = false; };
+    }, [dispatch, selectedCartKey, selectedCart]);
 
-        {isLoading ? (
-            <div className='lg:w-[80%] mx-auto py-5'>
-                <Skeleton />
+  return (
+    <main className='min-h-[calc(100vh-100px)] bg-slate-50 py-8'>
+        {!addressesLoaded ? (
+            <div className='mx-auto max-w-6xl px-4 py-5'><Skeleton /></div>
+        ) : selectedCart.length === 0 ? (
+            <div className='mx-auto max-w-6xl px-4'>
+                <p className='rounded-lg border border-slate-200 bg-white p-6 text-center text-slate-600'>Satın almak için sepetinizden ürün seçin.</p>
             </div>
         ) : (
-            <div className='mt-5'>
-                {activeStep === 0 && <AddressInfo address={address} />}
-                {activeStep === 1 && <PaymentMethod />}
-                {activeStep === 2 && <OrderSummary 
-                                        totalPrice={totalPrice}
-                                        cart={cart}
-                                        address={selectedUserCheckoutAddress}
-                                        paymentMethod={paymentMethod}/>}
-                {activeStep === 3 && 
-                    <>
-                        {paymentMethod === "Izico" ? (
-                            <IzicoPayment />
-                        ) : (
-                            <IzicoPayment />
-                        )}
-                    </>}
+            <div className='mx-auto max-w-6xl space-y-6 px-4'>
+                <AddressInfo address={address} cart={selectedCart} total={selectedTotal} />
+                <IzicoPayment enabled={cartReady && !!selectedUserCheckoutAddress && selectedCart.length > 0} />
             </div>
         )}
-        
-
-        <div
-            className={`flex justify-between items-center px-4 h-24 bg-white w-full py-4 border-slate-200 ${
-                activeStep === steps.length - 1 ? 'relative mt-4' : 'fixed z-50 bottom-0 left-0'
-            }`}
-            style={{ boxShadow: "0 -2px 4px rgba(100, 100, 100, 0.15)" }}>
-            <Button
-                variant='outlined'
-                disabled={activeStep === 0}
-                onClick={handleBack}>
-                    Back
-            </Button>
-
-            {activeStep !== steps.length - 1 && (
-                <button
-                    disabled={
-                        errorMessage || (
-                            (activeStep === 0 ? !selectedUserCheckoutAddress
-                                : activeStep === 1 ? !paymentMethod
-                                : false
-                            )
-                        )
-                    }
-                    className={`bg-custom-blue font-semibold px-6 h-10 rounded-md text-white
-                       ${
-                        errorMessage ||
-                        (activeStep === 0 && !selectedUserCheckoutAddress) ||
-                        (activeStep === 1 && !paymentMethod)
-                        ? "opacity-60"
-                        : ""
-                       }`}
-                       onClick={handleNext}>
-                    Proceed
-                </button>
-            )} 
-        </div>
-        
-        {errorMessage && <ErrorPage message={errorMessage} />}
-    </div>
+        {errorMessage && <div className='mx-auto mt-4 max-w-6xl px-4'><ErrorPage message={errorMessage} /></div>}
+    </main>
   );
 }
 

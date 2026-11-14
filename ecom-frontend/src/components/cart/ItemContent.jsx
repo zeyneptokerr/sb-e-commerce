@@ -1,116 +1,55 @@
 import { useState } from "react";
 import { HiOutlineTrash } from "react-icons/hi";
-import SetQuantity from "./SetQuantity";
-import { useDispatch } from "react-redux";
-import { decreaseCartQuantity, increaseCartQuantity, removeFromCart } from "../../store/actions";
+import { useDispatch, useSelector } from "react-redux";
 import toast from "react-hot-toast";
+import SetQuantity from "./SetQuantity";
+import { decreaseCartQuantity, increaseCartQuantity, removeFromCart } from "../../store/actions";
 import { formatPrice } from "../../utils/formatPrice";
 import truncateText from "../../utils/truncateText";
 import { productImageUrl } from "../../utils/productImageUrl";
 
-const ItemContent = ({
-    productId,
-    productName,
-    image,
-    description,
-    quantity,
-    price,
-    discount,
-    specialPrice,
-    cartId,
-  }) => {
+const ItemContent = ({ productId, productName, image, description, quantity, price, specialPrice, sellerName, sellerId, selected = true }) => {
     const [currentQuantity, setCurrentQuantity] = useState(quantity);
     const dispatch = useDispatch();
+    const cart = useSelector((state) => state.carts.cart);
+    const unitPrice = Number(specialPrice ?? price);
+    const itemData = { productId, productName, image, description, price, specialPrice, quantity: currentQuantity, sellerName, sellerId, selected };
 
-    const handleQtyIncrease = (cartItems) => {
-        dispatch(increaseCartQuantity(
-            cartItems,
-            toast,
-            currentQuantity,
-            setCurrentQuantity
-        ));
+    const toggleSelected = () => {
+        dispatch({ type: "TOGGLE_CART_ITEM_SELECTED", payload: { productId } });
+        localStorage.setItem("cartItems", JSON.stringify(cart.map((item) => item.productId === productId
+            ? { ...item, selected: !(item.selected ?? true) }
+            : item)));
     };
 
-    const handleQtyDecrease = (cartItems) => {
-        if (currentQuantity > 1) {
-            const newQuantity = currentQuantity - 1;
-            setCurrentQuantity(newQuantity);
-            dispatch(decreaseCartQuantity(cartItems, newQuantity));
-        }
+    const handleQtyIncrease = () => dispatch(increaseCartQuantity(itemData, toast, currentQuantity, setCurrentQuantity));
+    const handleQtyDecrease = () => {
+        if (currentQuantity <= 1) return;
+        const newQuantity = currentQuantity - 1;
+        setCurrentQuantity(newQuantity);
+        dispatch(decreaseCartQuantity(itemData, newQuantity));
     };
+    const removeItem = () => dispatch(removeFromCart(itemData, toast));
 
-    const removeItemFromCart = (cartItems) => {
-        dispatch(removeFromCart(cartItems, toast));
-    };
-    
-    return (
-        <div className="grid md:grid-cols-5 grid-cols-4 md:text-md text-sm gap-4   items-center  border border-slate-200  rounded-md  lg:px-4  py-4 p-2">
-            <div className="md:col-span-2 justify-self-start flex  flex-col gap-2 ">
-                <div className="flex md:flex-row flex-col lg:gap-4 sm:gap-3 gap-0 items-start ">
-                   <h3 className="lg:text-[17px] text-sm font-semibold text-slate-600">
-                    {truncateText(productName)}
-                   </h3>
-                </div>
-
-                <div className="md:w-36 sm:w-24 w-12">
-                    <img 
-                        src={productImageUrl(image)}
-                        alt={productName}
-                        className="md:h-36 sm:h-24 h-12 w-full object-cover rounded-md"/>
-                
-
-                <div className="flex items-start gap-5 mt-3">
-                    <button
-                        onClick={() => removeItemFromCart({
-                            image,
-                            productName,
-                            description,
-                            specialPrice,
-                            price,
-                            productId,
-                            quantity,
-                        })}
-                        className="flex items-center font-semibold space-x-2 px-4 py-1 text-xs border border-rose-600 text-rose-600 rounded-md hover:bg-red-50 transition-colors duration-200">
-                        <HiOutlineTrash size={16} className="text-rose-600"/>
-                        Remove
-                    </button>
-                    </div>
-                </div>
-            </div>
-
-            <div className="justify-self-center lg:text-[17px] text-sm text-slate-600 font-semibold">
-                {formatPrice(Number(specialPrice))}
-            </div>
-
-            <div className="justify-self-center">
-                <SetQuantity 
-                    quantity={currentQuantity}
-                    cardCounter={true}
-                    handeQtyIncrease={() => handleQtyIncrease({
-                        image,
-                        productName,
-                        description,
-                        specialPrice,
-                        price,
-                        productId,
-                        quantity,
-                    })}
-                    handleQtyDecrease={() => {handleQtyDecrease({
-                        image,
-                        productName,
-                        description,
-                        specialPrice,
-                        price,
-                        productId,
-                        quantity,
-                    })}}/>
-            </div>
-
-            <div className="justify-self-center lg:text-[17px] text-sm text-slate-600 font-semibold">
-                {formatPrice(Number(currentQuantity) * Number(specialPrice))}
+    return <article className="flex flex-col gap-3 py-4 sm:flex-row sm:items-center sm:gap-4">
+        <input type="checkbox" checked={selected} onChange={toggleSelected} aria-label={`${productName} ürününü seç`} className="h-5 w-5 shrink-0 accent-orange-500" />
+        <img src={productImageUrl(image)} alt={productName} className="h-24 w-24 shrink-0 rounded-md border border-slate-100 object-contain sm:h-28 sm:w-28" />
+        <div className="min-w-0 flex-1">
+            <h3 className="font-semibold text-slate-800" title={productName}>{truncateText(productName, 80)}</h3>
+            <p className="mt-1 line-clamp-2 text-xs text-slate-500">{description}</p>
+            {sellerName && <p className="mt-2 text-xs text-slate-500">Satıcı: {sellerName}</p>}
+            <button type="button" onClick={removeItem} className="mt-2 inline-flex items-center gap-1 text-xs font-medium text-rose-600 hover:text-rose-700">
+                <HiOutlineTrash size={15} /> Sepetten kaldır
+            </button>
+        </div>
+        <div className="flex items-center justify-between gap-4 sm:flex-col sm:items-end">
+            <SetQuantity quantity={currentQuantity} cardCounter handeQtyIncrease={handleQtyIncrease} handleQtyDecrease={handleQtyDecrease} />
+            <div className="text-right">
+                <p className="font-bold text-slate-900">{formatPrice(unitPrice * currentQuantity)}</p>
+                <p className="text-xs text-slate-500">{formatPrice(unitPrice)} / adet</p>
             </div>
         </div>
-    )
+    </article>;
 };
 
 export default ItemContent;

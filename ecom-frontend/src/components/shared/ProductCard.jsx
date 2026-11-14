@@ -15,6 +15,8 @@ const ProductCard = ( {
         price,
         discount,
         specialPrice,
+        sellerName,
+        sellerId,
         about = false,
     } ) => {
     
@@ -78,6 +80,8 @@ const ProductCard = ( {
                                 productName,
                                 description,
                                 specialPrice,
+                                sellerName,
+                                sellerId,
                                 price,
                                 productId,
                                 quantity,

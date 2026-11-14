@@ -1,7 +1,8 @@
 import React from 'react'
 import { formatPriceCalculation } from '../../utils/formatPrice'
+import { productImageUrl } from '../../utils/productImageUrl'
 
-const OrderSummary = ({ totalPrice, cart, address, paymentMethod}) => {
+const OrderSummary = ({ totalPrice, cart, address }) => {
   return (
     <div className="container mx-auto px-4 mb-8">
      <div className="flex flex-wrap">
@@ -35,12 +36,10 @@ const OrderSummary = ({ totalPrice, cart, address, paymentMethod}) => {
             </p>
         </div>
         <div className='p-4 border rounded-lg shadow-xs'>
-            <h2 className='text-2xl font-semibold mb-2'>
-                Payment Method
-            </h2>
+            <h2 className='text-2xl font-semibold mb-2'>Ödeme</h2>
             <p>
-                <strong>Method: </strong>
-                {paymentMethod}
+                <strong>Ödeme sağlayıcısı: </strong>
+                iyzico
             </p>
         </div>
 
@@ -49,16 +48,14 @@ const OrderSummary = ({ totalPrice, cart, address, paymentMethod}) => {
             <div className='space-y-2'>
                 {cart?.map((item) => (
                     <div key={item?.productId} className='flex items-center'>
-                        <img src={`${import.meta.env.VITE_BACK_END_URL}/images/${
-                            item?.image
-                        }`}
+                        <img src={productImageUrl(item?.image)}
                         alt='Product'
                         className='w-12 h-12 rounded-sm'></img>
                     <div className='text-gray-500'>
                         <p>{item?.productName}</p>
                         <p>
-                {item?.quantity} x ${item?.specialPrice} = ${
-                    formatPriceCalculation(item?.quantity, item?.specialPrice)
+                {item?.quantity} x ${item?.specialPrice ?? item?.price} = ${
+                    formatPriceCalculation(item?.quantity, item?.specialPrice ?? item?.price)
                 }
                         </p>
                     </div>

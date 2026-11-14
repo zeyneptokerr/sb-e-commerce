@@ -110,6 +110,8 @@ public class ProductServiceImpl implements ProductService {
                 product -> {
                     ProductDTO productDTO = modelMapper.map(product, ProductDTO.class);
                     productDTO.setImage(constructImageUrl(product.getImage()));
+                    productDTO.setSellerName(product.getUser() != null ? product.getUser().getUserName() : null);
+                    productDTO.setSellerId(product.getUser() != null ? product.getUser().getUserId() : null);
                     return productDTO;
                 }).toList();
         ProductResponse productResponse = new ProductResponse();
@@ -128,6 +130,7 @@ public class ProductServiceImpl implements ProductService {
                 () -> new ResourceNotFoundException("Product", "productId", productId));
         ProductDTO productDTO = modelMapper.map(product, ProductDTO.class);
         productDTO.setSellerName(product.getUser() != null ? product.getUser().getUserName() : null);
+        productDTO.setSellerId(product.getUser() != null ? product.getUser().getUserId() : null);
         return productDTO;
     }
 

@@ -71,6 +71,12 @@ public class AddressServiceImpl implements AddressService {
         addressFromDatabase.setCountry(addressDTO.getCountry());
         addressFromDatabase.setStreet(addressDTO.getStreet());
         addressFromDatabase.setBuildingName(addressDTO.getBuildingName());
+        addressFromDatabase.setFirstName(addressDTO.getFirstName());
+        addressFromDatabase.setLastName(addressDTO.getLastName());
+        addressFromDatabase.setPhone(addressDTO.getPhone());
+        addressFromDatabase.setNeighborhood(addressDTO.getNeighborhood());
+        addressFromDatabase.setAddressType(addressDTO.getAddressType());
+        addressFromDatabase.setPincode(addressDTO.getPincode());
 
         Address updatedAddress = addressRepository.save(addressFromDatabase);
 

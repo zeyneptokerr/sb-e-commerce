@@ -1,10 +1,14 @@
 package com.ecommerce.project.service;
 
+import com.ecommerce.project.payload.Iyzico3dsInitResponse;
+import com.ecommerce.project.payload.Iyzico3dsPaymentRequest;
 import com.ecommerce.project.payload.IyzicoCallbackResult;
-import com.iyzipay.model.CheckoutFormInitialize;
-import com.ecommerce.project.payload.IyzicoPaymentDto;
+import com.ecommerce.project.payload.IyzicoInstallmentQueryRequest;
+import com.ecommerce.project.payload.IyzicoInstallmentResponse;
 
 public interface IyzicoService {
-    CheckoutFormInitialize initializeCheckoutForm(String email, IyzicoPaymentDto paymentDto);
-    IyzicoCallbackResult retrieveCheckoutFormResult(String token);
+    Iyzico3dsInitResponse initialize3dsPayment(String email, String clientIp, Iyzico3dsPaymentRequest paymentRequest);
+    IyzicoInstallmentResponse getInstallmentOptions(String email, IyzicoInstallmentQueryRequest queryRequest);
+    IyzicoCallbackResult complete3dsPayment(String status, String paymentId, String conversationData,
+                                            String conversationId, String mdStatus);
 }

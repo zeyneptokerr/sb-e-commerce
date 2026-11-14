@@ -12,6 +12,13 @@ const persistCartForLoggedInUser = async (dispatch, getState) => {
     await api.post("/cart/create", cartItems);
 };
 
+const getAuthHeaders = (getState) => {
+    const storedToken = getState().auth.user?.jwtToken;
+    // The login response currently stores the Set-Cookie value in jwtToken.
+    const token = storedToken?.split(";")[0]?.split("=").slice(1).join("=");
+    return token ? { Authorization: `Bearer ${token}` } : {};
+};
+
 export const fetchProducts = (queryString) => async (dispatch) => {
     try {
         dispatch({ type: "IS_FETCHING" });
@@ -96,7 +103,7 @@ export const increaseCartQuantity = (data, toast, currentQuantity, setCurrentQua
             (item) => item.productId === data.productId
         );
         
-        const isQuantityExist = getProduct.quantity >= currentQuantity + 1;
+        const isQuantityExist = (getProduct?.quantity ?? data.quantity) >= currentQuantity + 1;
 
         if (isQuantityExist) {
             const newQuantity = currentQuantity + 1;
@@ -191,16 +198,13 @@ export const logOutUser = (navigate) => (dispatch) => {
 
 
 export const addUpdateUserAddress = (sendData, toast, addressId, setOpenAddressModal) => async (dispatch, getState) => {
-    // const { user } = getState("auth");
-    // const { data } = await api.post("/addresses", sendData, {
-    //             headers: { Authorization: "Bearer " + user.jwtToken },
-    //         });
     dispatch({ type: "BUTTON_LOADER" });
     try {
+        const config = { headers: getAuthHeaders(getState) };
         if (!addressId) {
-            const { data } = await api.post("/addresses", sendData );
+            await api.post("/addresses", sendData, config);
         } else {
-            await api.put(`/address/${addressId}`, sendData);
+            await api.put(`/addresses/${addressId}`, sendData, config);
         }
         dispatch(getUserAddresses());
         toast.success("Address Saved Succesfully");
@@ -240,7 +244,7 @@ export const selectUserCheckoutAddress = (address) => {
 export const deleteUserAddress = (toast,  addressId, setOpenDeleteModal) => async (dispatch, getState) => {
     try {
         dispatch({ type: "BUTTON_LOADER" });
-        await api.delete(`/address/${addressId}`);
+        await api.delete(`/addresses/${addressId}`, { headers: getAuthHeaders(getState) });
         dispatch(getUserAddresses());
         dispatch(clearCheckoutAddress());
         dispatch({ type: "IS_SUCCESS" });
@@ -262,24 +266,17 @@ export const clearCheckoutAddress = () => {
     }
 };
 
-export const addPaymentMethod = (method) => {
-    return {
-        type: "ADD_PAYMENT_METHOD",
-        payload: method,
-    }
-};
-
-export const createUserCart = (sendCartItems) => async (dispatch, getState) => {
+export const createUserCart = (sendCartItems) => async (dispatch) => {
     try {
-        dispatch({ type: "IS_FETCHING" });
         await api.post("/cart/create", sendCartItems);
-        await dispatch(getUserCart());
+        return true;
     } catch (error) {
         console.log(error);
         dispatch({
             type: "IS_ERROR",
             payload: error?.response?.data?.message || "Failed to create cart items",
         });
+        return false;
     }
 };
 
@@ -287,9 +284,14 @@ export const getUserCart = () => async (dispatch, getState) => {
     try {
         dispatch({ type: "IS_FETCHING" });
         const { data } = await api.get("/carts/users/cart");
+        const savedSelection = new Map(getState().carts.cart.map((item) => [item.productId, item.selected]));
+        const products = (data.products || []).map((item) => ({
+            ...item,
+            selected: savedSelection.get(item.productId) ?? true,
+        }));
         dispatch({
             type: "GET_USER_CART_PRODUCTS",
-            payload: data.products,
+            payload: products,
             totalPrice: data.totalPrice,
             cartId: data.cartId,
         })
@@ -313,17 +315,24 @@ export const createIzicoPayment = (sendData) => async (dispatch, getState) => {
     dispatch({ type: "CLEAR_PAYMENT" });
     try {
         const { data } = await api.post("/order/iyzico-payment", sendData);
-        dispatch({
-            type: "ADD_PAYMENT",
-            payload: data,
-        });
         dispatch({ type: "IS_SUCCESS" });
+        return data;
     } catch (error) {
-        console.log(error);
+        const message = error?.response?.data?.message || "iyzico ödemesi başlatılamadı.";
         dispatch({
             type: "IS_ERROR",
-            payload: error?.response?.data?.message || "Failed to payment",
+            payload: message,
         });
+        return { error: message };
+    }
+};
+
+export const getIyzicoInstallments = (binNumber) => async () => {
+    try {
+        const { data } = await api.post("/order/iyzico-installments", { binNumber });
+        return data;
+    } catch (error) {
+        return { error: error?.response?.data?.message || "Taksit seçenekleri alınamadı." };
     }
 };
 
